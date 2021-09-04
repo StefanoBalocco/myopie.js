@@ -1,17 +1,18 @@
-interface ChildNodes {
+interface NodeWithChilds {
     childNodes: NodeListOf<ChildNode>;
-    append(node: ChildNode): void;
+    appendChild(node: ChildNode): void;
 }
 declare class myopie {
-    private id;
+    private selector;
     private template;
     private timer;
     private timeout;
     private data;
-    constructor(id: string, template: (data: any) => string, timeout?: number);
+    private inputToPath;
+    constructor(id: string, template: (data: any) => string, inputToPath: string[][], timeout?: number);
     private SameNode;
     private DiffNode;
     render(): void;
     get(path: (string | null)): any;
-    set(path: string, value: any, update?: boolean): void;
+    set(path: string, value: any, render?: boolean): void;
 }

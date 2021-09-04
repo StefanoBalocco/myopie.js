@@ -1,10 +1,21 @@
 "use strict";
 class myopie {
-    constructor(id, template, timeout = 1000) {
+    constructor(id, template, inputToPath, timeout = 1000) {
         this.timer = null;
-        this.id = id;
+        this.selector = '#' + id;
         this.template = template;
         this.timeout = timeout;
+        this.inputToPath = inputToPath;
+        document.addEventListener('input', (e) => {
+            const event = e;
+            const countFL = this.inputToPath.length;
+            let found = false;
+            for (let indexFL = 0; !found && indexFL < countFL; indexFL++) {
+                if (event && event.target && event.target.matches(this.inputToPath[indexFL][0])) {
+                    this.set(this.inputToPath[indexFL][1], event.target.value, false);
+                }
+            }
+        });
     }
     SameNode(node1, node2) {
         return ((node1.nodeType === node2.nodeType) &&
@@ -43,7 +54,8 @@ class myopie {
                         const attributesTemplate = tmpItem.attributes;
                         const attributesExistings = nodesExisting[indexFL].attributes;
                         for (let { name, value } of attributesTemplate) {
-                            if (['value', 'checked', 'selected'].includes(name) && ['input', 'option', 'textarea'].includes(tmpItem.tagName.toLowerCase())) {
+                            if ((-1 !== ['value', 'checked', 'selected'].indexOf(name)) &&
+                                (-1 !== ['input', 'option', 'textarea'].indexOf(tmpItem.tagName.toLowerCase()))) {
                                 continue;
                             }
                             nodesExisting[indexFL].setAttribute(name, value);
@@ -52,7 +64,8 @@ class myopie {
                             if (null !== attributesTemplate.getNamedItem(name)) {
                                 continue;
                             }
-                            if (['value', 'checked', 'selected'].includes(name) && ['input', 'option', 'textarea'].includes(nodesExisting[indexFL].tagName.toLowerCase())) {
+                            if ((-1 !== ['value', 'checked', 'selected'].indexOf(name)) &&
+                                (['input', 'option', 'textarea'].indexOf(nodesExisting[indexFL].tagName.toLowerCase()))) {
                                 continue;
                             }
                             nodesExisting[indexFL].removeAttribute(name);
@@ -74,7 +87,7 @@ class myopie {
     }
     render() {
         this.timer = null;
-        const htmlExisting = document.getElementById(this.id);
+        const htmlExisting = document.querySelector(this.selector);
         if (null != htmlExisting) {
             const parser = new DOMParser();
             let tmpValue = parser.parseFromString(this.template(this.data), 'text/html');
@@ -109,7 +122,7 @@ class myopie {
         }
         return returnValue;
     }
-    set(path, value, update = true) {
+    set(path, value, render = true) {
         let tmpValue = this.data;
         let components = path.split(/(?<!(?<!\\)\\)\//);
         const lenFL = components.length;
@@ -121,7 +134,7 @@ class myopie {
             tmpValue = tmpValue[tmpPath];
         }
         tmpValue[components[lenFL - 1]] = value;
-        if (update) {
+        if (render) {
             if (null != this.timer) {
                 clearTimeout(this.timer);
             }

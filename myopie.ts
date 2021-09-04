@@ -2,23 +2,35 @@
  * Partially rip from https://github.com/cferdinandi/reef/
  */
 
-interface ChildNodes {
+interface NodeWithChilds {
 	childNodes: NodeListOf<ChildNode>,
 
-	append( node: ChildNode ): void;
+	appendChild( node: ChildNode ): void;
 }
 
 class myopie {
-	private id: string;
+	private selector: string;
 	private template: ( data: any ) => string;
 	private timer: ( number | null ) = null;
 	private timeout: number;
 	private data: any;
+	private inputToPath: string[][];
 
-	constructor( id: string, template: ( data: any ) => string, timeout: number = 1000 ) {
-		this.id = id;
+	constructor( id: string, template: ( data: any ) => string, inputToPath: string[][], timeout: number = 1000 ) {
+		this.selector = '#' + id;
 		this.template = template;
 		this.timeout = timeout;
+		this.inputToPath = inputToPath;
+		document.addEventListener( 'input', ( e ) => {
+			const event = <InputEvent> e;
+			const countFL = this.inputToPath.length;
+			let found = false;
+			for( let indexFL = 0; !found && indexFL < countFL; indexFL++ ) {
+				if( event && event.target && ( <Element> event.target ).matches( this.inputToPath[ indexFL ][ 0 ] ) ) {
+					this.set( this.inputToPath[ indexFL ][ 1 ], (<HTMLInputElement> event.target).value, false );
+				}
+			}
+		} );
 	}
 
 	private SameNode( node1: Element, node2: Element ) {
@@ -29,7 +41,7 @@ class myopie {
 		);
 	}
 
-	private DiffNode( nodeTemplate: { childNodes: NodeListOf<ChildNode>, appendChild( node: Node ): void }, nodeExisting: { childNodes: NodeListOf<ChildNode>, appendChild( node: Node ): void } ) {
+	private DiffNode( nodeTemplate: NodeWithChilds, nodeExisting: NodeWithChilds ) {
 		const nodesTemplate = nodeTemplate.childNodes;
 		const nodesExisting = nodeExisting.childNodes;
 		const countFL = nodesTemplate.length;
@@ -58,7 +70,8 @@ class myopie {
 						const attributesTemplate = ( <Element> tmpItem ).attributes;
 						const attributesExistings = ( <Element> nodesExisting[ indexFL ] ).attributes;
 						for( let { name, value } of attributesTemplate ) {
-							if( [ 'value', 'checked', 'selected' ].includes( name ) && [ 'input', 'option', 'textarea' ].includes( ( <Element> tmpItem ).tagName.toLowerCase() ) ) {
+							if( ( -1 !== [ 'value', 'checked', 'selected' ].indexOf( name ) ) &&
+									( -1 !== [ 'input', 'option', 'textarea' ].indexOf( ( <Element> tmpItem ).tagName.toLowerCase() ) ) ) {
 								continue;
 							}
 							( <Element> nodesExisting[ indexFL ] ).setAttribute( name, value );
@@ -68,7 +81,8 @@ class myopie {
 							if( null !== attributesTemplate.getNamedItem( name ) ) {
 								continue;
 							}
-							if( [ 'value', 'checked', 'selected' ].includes( name ) && [ 'input', 'option', 'textarea' ].includes( ( <Element> nodesExisting[ indexFL ] ).tagName.toLowerCase() ) ) {
+							if( ( -1 !== [ 'value', 'checked', 'selected' ].indexOf( name ) ) &&
+									( [ 'input', 'option', 'textarea' ].indexOf( ( <Element> nodesExisting[ indexFL ] ).tagName.toLowerCase() ) ) ) {
 								continue;
 							}
 							( <Element> nodesExisting[ indexFL ] ).removeAttribute( name );
@@ -90,7 +104,7 @@ class myopie {
 
 	public render() {
 		this.timer = null;
-		const htmlExisting = document.getElementById( this.id );
+		const htmlExisting = document.querySelector<Element>( this.selector );
 		if( null != htmlExisting ) {
 			const parser = new DOMParser();
 			let tmpValue = parser.parseFromString( this.template( this.data ), 'text/html' );
@@ -99,6 +113,7 @@ class myopie {
 			}
 			const htmlTemplate = ( tmpValue && tmpValue.body ) ? tmpValue.body : document.createElement( 'body' );
 			this.DiffNode( htmlTemplate, htmlExisting );
+
 		} else {
 			// Missing target id
 		}
@@ -125,7 +140,7 @@ class myopie {
 		return returnValue;
 	}
 
-	public set( path: string, value: any, update = true ) {
+	public set( path: string, value: any, render = true ) {
 		let tmpValue = this.data;
 		let components = path.split( /(?<!(?<!\\)\\)\// );
 		const lenFL = components.length;
@@ -137,7 +152,7 @@ class myopie {
 			tmpValue = tmpValue[ tmpPath ];
 		}
 		tmpValue[ components[ lenFL - 1 ] ] = value;
-		if( update ) {
+		if( render ) {
 			if( null != this.timer ) {
 				clearTimeout( this.timer );
 			}
