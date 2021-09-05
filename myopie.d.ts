@@ -9,7 +9,7 @@ declare class myopie {
     private timeout;
     private data;
     private inputToPath;
-    constructor(id: string, template: (data: any) => string, inputToPath: string[][], timeout?: number);
+    constructor(selector: string, template: (data: any) => string, inputToPath?: string[][], timeout?: number);
     private SameNode;
     private DiffNode;
     render(): void;

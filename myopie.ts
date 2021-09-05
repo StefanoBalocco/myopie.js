@@ -13,11 +13,11 @@ class myopie {
 	private template: ( data: any ) => string;
 	private timer: ( number | null ) = null;
 	private timeout: number;
-	private data: any;
+	private data: any = {};
 	private inputToPath: string[][];
 
-	constructor( id: string, template: ( data: any ) => string, inputToPath: string[][], timeout: number = 1000 ) {
-		this.selector = '#' + id;
+	constructor( selector: string, template: ( data: any ) => string, inputToPath: string[][] = [], timeout: number = 1000 ) {
+		this.selector = selector;
 		this.template = template;
 		this.timeout = timeout;
 		this.inputToPath = inputToPath;
@@ -27,7 +27,7 @@ class myopie {
 			let found = false;
 			for( let indexFL = 0; !found && indexFL < countFL; indexFL++ ) {
 				if( event && event.target && ( <Element> event.target ).matches( this.inputToPath[ indexFL ][ 0 ] ) ) {
-					this.set( this.inputToPath[ indexFL ][ 1 ], (<HTMLInputElement> event.target).value, false );
+					this.set( this.inputToPath[ indexFL ][ 1 ], ( <HTMLInputElement> event.target ).value, false );
 				}
 			}
 		} );
@@ -46,7 +46,7 @@ class myopie {
 		const nodesExisting = nodeExisting.childNodes;
 		const countFL = nodesTemplate.length;
 		for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
-			const tmpItem = Object.assign( {}, nodesTemplate[ indexFL ] );
+			const tmpItem : any = nodesTemplate[ indexFL ];
 			if( 'undefined' === typeof nodesExisting[ indexFL ] ) {
 				nodeExisting.appendChild( tmpItem );
 			} else {
@@ -156,7 +156,7 @@ class myopie {
 			if( null != this.timer ) {
 				clearTimeout( this.timer );
 			}
-			this.timer = setTimeout( this.render, this.timeout );
+			this.timer = setTimeout( () => this.render(), this.timeout );
 		}
 	}
 }

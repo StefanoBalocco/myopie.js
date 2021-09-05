@@ -1,8 +1,9 @@
 "use strict";
 class myopie {
-    constructor(id, template, inputToPath, timeout = 1000) {
+    constructor(selector, template, inputToPath = [], timeout = 1000) {
         this.timer = null;
-        this.selector = '#' + id;
+        this.data = {};
+        this.selector = selector;
         this.template = template;
         this.timeout = timeout;
         this.inputToPath = inputToPath;
@@ -28,7 +29,7 @@ class myopie {
         const nodesExisting = nodeExisting.childNodes;
         const countFL = nodesTemplate.length;
         for (let indexFL = 0; indexFL < countFL; indexFL++) {
-            const tmpItem = Object.assign({}, nodesTemplate[indexFL]);
+            const tmpItem = nodesTemplate[indexFL];
             if ('undefined' === typeof nodesExisting[indexFL]) {
                 nodeExisting.appendChild(tmpItem);
             }
@@ -138,7 +139,7 @@ class myopie {
             if (null != this.timer) {
                 clearTimeout(this.timer);
             }
-            this.timer = setTimeout(this.render, this.timeout);
+            this.timer = setTimeout(() => this.render(), this.timeout);
         }
     }
 }
