@@ -13,6 +13,16 @@ class myopie {
             let found = false;
             for (let indexFL = 0; !found && indexFL < countFL; indexFL++) {
                 if (event && event.target && event.target.matches(this.inputToPath[indexFL][0])) {
+                    switch (event.target.type) {
+                        case 'checkbox': {
+                            break;
+                        }
+                        case 'radio': {
+                            break;
+                        }
+                        default: {
+                        }
+                    }
                     this.set(this.inputToPath[indexFL][1], event.target.value, false);
                 }
             }

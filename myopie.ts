@@ -27,6 +27,17 @@ class myopie {
 			let found = false;
 			for( let indexFL = 0; !found && indexFL < countFL; indexFL++ ) {
 				if( event && event.target && ( <Element> event.target ).matches( this.inputToPath[ indexFL ][ 0 ] ) ) {
+					switch( (<HTMLInputElement>event.target).type ) {
+						case 'checkbox': {
+							break;
+						}
+						case 'radio': {
+							break;
+						}
+						default: {
+							// Text, number, password, date, email, ecc
+						}
+					}
 					this.set( this.inputToPath[ indexFL ][ 1 ], ( <HTMLInputElement> event.target ).value, false );
 				}
 			}
