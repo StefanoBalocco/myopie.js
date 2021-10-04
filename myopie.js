@@ -117,7 +117,7 @@ class myopie {
         if (null != path) {
             let components = path.split(/(?<!(?<!\\)\\)\//);
             const lenFL = components.length;
-            for (let indexFL = 0; ((indexFL < lenFL - 1) && ('undefined' !== typeof returnValue)); indexFL++) {
+            for (let indexFL = 0; ((indexFL < lenFL) && ('undefined' !== typeof returnValue)); indexFL++) {
                 if (Array.isArray(returnValue) || ('object' === typeof (returnValue))) {
                     const elem = components[indexFL];
                     if ('undefined' !== typeof returnValue[elem]) {
