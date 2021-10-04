@@ -1,0 +1,32 @@
+<html>
+<head>
+	<title>Test</title>
+</head>
+<body>
+	<div id="testcontainer"></div>
+	<script type="text/javascript" src="myopie.js"></script>
+	<script type="text/javascript">
+function render( data ) {
+	return "<div><input type='text' name='testText' value='" + data.content + "'></div>";
+}
+const myop = new myopie( "#testcontainer", render, [ ['input[name="testText"]', 'content']] );
+window[ "myop" ] = myop;
+myop.set( 'content', 'foo' );
+setTimeout( () => {
+console.log( 'Timeout 1');
+window[ 'myop' ].set( 'content', 'bar' );
+window[ 'myop' ].set( 'content', 'foobar' );
+}, 3000 );
+console.log( myop.get( 'content' ) );
+setTimeout( () => {
+console.log( 'Timeout 2');
+console.log( window[ 'myop' ].get( 'content' ) );
+window[ 'myop' ].set( 'content', 'foobarfoo' );
+}, 4000 );
+setTimeout( () => {
+console.log( 'Timeout 3');
+console.log( window[ 'myop' ].get( 'content' ) );
+}, 15000 );
+	</script>
+</body>
+</html>

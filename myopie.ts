@@ -9,12 +9,12 @@ interface NodeWithChilds {
 }
 
 class myopie {
-	private selector: string;
-	private template: ( data: any ) => string;
+	private readonly selector: string;
+	private readonly template: ( data: any ) => string;
+	private readonly timeout: number;
+	private readonly inputToPath: string[][];
 	private timer: ( number | null ) = null;
-	private timeout: number;
 	private data: any = {};
-	private inputToPath: string[][];
 
 	constructor( selector: string, template: ( data: any ) => string, inputToPath: string[][] = [], timeout: number = 1000 ) {
 		this.selector = selector;
@@ -27,18 +27,20 @@ class myopie {
 			let found = false;
 			for( let indexFL = 0; !found && indexFL < countFL; indexFL++ ) {
 				if( event && event.target && ( <Element> event.target ).matches( this.inputToPath[ indexFL ][ 0 ] ) ) {
-					switch( (<HTMLInputElement>event.target).type ) {
+					switch( ( <HTMLInputElement> event.target ).type ) {
 						case 'checkbox': {
+							this.set( this.inputToPath[ indexFL ][ 1 ], ( <HTMLInputElement> event.target ).checked, false );
 							break;
 						}
 						case 'radio': {
+							this.set( this.inputToPath[ indexFL ][ 1 ], ( <HTMLInputElement> event.target ).checked, false );
 							break;
 						}
 						default: {
+							this.set( this.inputToPath[ indexFL ][ 1 ], ( <HTMLInputElement> event.target ).value, false );
 							// Text, number, password, date, email, ecc
 						}
 					}
-					this.set( this.inputToPath[ indexFL ][ 1 ], ( <HTMLInputElement> event.target ).value, false );
 				}
 			}
 		} );
@@ -57,7 +59,7 @@ class myopie {
 		const nodesExisting = nodeExisting.childNodes;
 		const countFL = nodesTemplate.length;
 		for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
-			const tmpItem : any = nodesTemplate[ indexFL ];
+			const tmpItem: any = nodesTemplate[ indexFL ];
 			if( 'undefined' === typeof nodesExisting[ indexFL ] ) {
 				nodeExisting.appendChild( tmpItem );
 			} else {
@@ -81,22 +83,20 @@ class myopie {
 						const attributesTemplate = ( <Element> tmpItem ).attributes;
 						const attributesExistings = ( <Element> nodesExisting[ indexFL ] ).attributes;
 						for( let { name, value } of attributesTemplate ) {
-							if( ( -1 !== [ 'value', 'checked', 'selected' ].indexOf( name ) ) &&
-									( -1 !== [ 'input', 'option', 'textarea' ].indexOf( ( <Element> tmpItem ).tagName.toLowerCase() ) ) ) {
-								continue;
+							if( name.startsWith( 'data-myopie-default-' ) && ( 12 < name.length ) ) {
+								const realName = name.substr( 12 );
+								if( null === attributesExistings.getNamedItem( realName ) ) {
+									( <Element> nodesExisting[ indexFL ] ).setAttribute( realName, value );
+								}
+							} else {
+								( <Element> nodesExisting[ indexFL ] ).setAttribute( name, value );
 							}
-							( <Element> nodesExisting[ indexFL ] ).setAttribute( name, value );
 						}
 						// @ts-ignore
 						for( let { name, value } of attributesExistings ) {
-							if( null !== attributesTemplate.getNamedItem( name ) ) {
-								continue;
+							if( null === attributesTemplate.getNamedItem( name ) ) {
+								( <Element> nodesExisting[ indexFL ] ).removeAttribute( name );
 							}
-							if( ( -1 !== [ 'value', 'checked', 'selected' ].indexOf( name ) ) &&
-									( [ 'input', 'option', 'textarea' ].indexOf( ( <Element> nodesExisting[ indexFL ] ).tagName.toLowerCase() ) ) ) {
-								continue;
-							}
-							( <Element> nodesExisting[ indexFL ] ).removeAttribute( name );
 						}
 					}
 					//attributes

@@ -15,15 +15,17 @@ class myopie {
                 if (event && event.target && event.target.matches(this.inputToPath[indexFL][0])) {
                     switch (event.target.type) {
                         case 'checkbox': {
+                            this.set(this.inputToPath[indexFL][1], event.target.checked, false);
                             break;
                         }
                         case 'radio': {
+                            this.set(this.inputToPath[indexFL][1], event.target.checked, false);
                             break;
                         }
                         default: {
+                            this.set(this.inputToPath[indexFL][1], event.target.value, false);
                         }
                     }
-                    this.set(this.inputToPath[indexFL][1], event.target.value, false);
                 }
             }
         });
@@ -65,21 +67,20 @@ class myopie {
                         const attributesTemplate = tmpItem.attributes;
                         const attributesExistings = nodesExisting[indexFL].attributes;
                         for (let { name, value } of attributesTemplate) {
-                            if ((-1 !== ['value', 'checked', 'selected'].indexOf(name)) &&
-                                (-1 !== ['input', 'option', 'textarea'].indexOf(tmpItem.tagName.toLowerCase()))) {
-                                continue;
+                            if (name.startsWith('data-myopie-default-') && (12 < name.length)) {
+                                const realName = name.substr(12);
+                                if (null === attributesExistings.getNamedItem(realName)) {
+                                    nodesExisting[indexFL].setAttribute(realName, value);
+                                }
                             }
-                            nodesExisting[indexFL].setAttribute(name, value);
+                            else {
+                                nodesExisting[indexFL].setAttribute(name, value);
+                            }
                         }
                         for (let { name, value } of attributesExistings) {
-                            if (null !== attributesTemplate.getNamedItem(name)) {
-                                continue;
+                            if (null === attributesTemplate.getNamedItem(name)) {
+                                nodesExisting[indexFL].removeAttribute(name);
                             }
-                            if ((-1 !== ['value', 'checked', 'selected'].indexOf(name)) &&
-                                (['input', 'option', 'textarea'].indexOf(nodesExisting[indexFL].tagName.toLowerCase()))) {
-                                continue;
-                            }
-                            nodesExisting[indexFL].removeAttribute(name);
                         }
                     }
                     if (!tmpItem.childNodes.length && nodesExisting[indexFL].childNodes.length) {

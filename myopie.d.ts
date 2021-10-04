@@ -3,12 +3,12 @@ interface NodeWithChilds {
     appendChild(node: ChildNode): void;
 }
 declare class myopie {
-    private selector;
-    private template;
+    private readonly selector;
+    private readonly template;
+    private readonly timeout;
+    private readonly inputToPath;
     private timer;
-    private timeout;
     private data;
-    private inputToPath;
     constructor(selector: string, template: (data: any) => string, inputToPath?: string[][], timeout?: number);
     private SameNode;
     private DiffNode;
