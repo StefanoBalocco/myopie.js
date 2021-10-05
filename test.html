@@ -7,25 +7,25 @@
 	<script type="text/javascript" src="myopie.js"></script>
 	<script type="text/javascript">
 function render( data ) {
-	return "<div><input type='text' name='testText' value='" + data.content + "'></div>";
+	return "<div><input type='text' name='testText' value='" + data.content.string + "'></div>";
 }
-const myop = new myopie( "#testcontainer", render, [ ['input[name="testText"]', 'content']] );
+const myop = new myopie( "#testcontainer", render, [ ['input[name="testText"]', 'content/string']] );
 window[ "myop" ] = myop;
-myop.set( 'content', 'foo' );
+myop.set( 'content/string', 'foo' );
 setTimeout( () => {
 console.log( 'Timeout 1');
-window[ 'myop' ].set( 'content', 'bar' );
-window[ 'myop' ].set( 'content', 'foobar' );
+window[ 'myop' ].set( 'content/string', 'bar' );
+window[ 'myop' ].set( 'content/string', 'foobar' );
 }, 3000 );
-console.log( myop.get( 'content' ) );
+console.log( myop.get( 'content/string' ) );
 setTimeout( () => {
 console.log( 'Timeout 2');
-console.log( window[ 'myop' ].get( 'content' ) );
-window[ 'myop' ].set( 'content', 'foobarfoo' );
+console.log( window[ 'myop' ].get( 'content/string' ) );
+window[ 'myop' ].set( 'content/string', 'foobarfoo' );
 }, 4000 );
 setTimeout( () => {
 console.log( 'Timeout 3');
-console.log( window[ 'myop' ].get( 'content' ) );
+console.log( window[ 'myop' ].get( 'content/string' ) );
 }, 15000 );
 	</script>
 </body>
