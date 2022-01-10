@@ -2,7 +2,9 @@
 class myopie {
     constructor(selector, template, inputToPath = [], timeout = 1000) {
         this.timer = null;
-        this.data = {};
+        this.dataCurrent = {};
+        this.dataPrevious = null;
+        this.hooks = { pre: [], post: [] };
         this.selector = selector;
         this.template = template;
         this.timeout = timeout;
@@ -30,7 +32,10 @@ class myopie {
             }
         });
     }
-    SameNode(node1, node2) {
+    static Create(selector, template, inputToPath = [], timeout = 1000) {
+        return new myopie(selector, template, inputToPath, timeout);
+    }
+    static SameNode(node1, node2) {
         return ((node1.nodeType === node2.nodeType) &&
             (node1.tagName === node2.tagName) &&
             (node1.id === node2.id) &&
@@ -39,16 +44,15 @@ class myopie {
     DiffNode(nodeTemplate, nodeExisting) {
         const nodesTemplate = nodeTemplate.childNodes;
         const nodesExisting = nodeExisting.childNodes;
-        const countFL = nodesTemplate.length;
-        for (let indexFL = 0; indexFL < countFL; indexFL++) {
+        for (let indexFL = 0; indexFL < nodesTemplate.length; indexFL++) {
             const tmpItem = nodesTemplate[indexFL];
             if ('undefined' === typeof nodesExisting[indexFL]) {
                 nodeExisting.appendChild(tmpItem);
             }
             else {
                 let skip = false;
-                if (!this.SameNode(tmpItem, nodesExisting[indexFL])) {
-                    let ahead = Array.from(nodesExisting).slice(indexFL + 1).find((branch) => this.SameNode(tmpItem, branch));
+                if (!myopie.SameNode(tmpItem, nodesExisting[indexFL])) {
+                    let ahead = Array.from(nodesExisting).slice(indexFL + 1).find((branch) => myopie.SameNode(tmpItem, branch));
                     if (!ahead) {
                         nodesExisting[indexFL].before(tmpItem);
                         skip = true;
@@ -67,17 +71,21 @@ class myopie {
                         const attributesTemplate = tmpItem.attributes;
                         const attributesExistings = nodesExisting[indexFL].attributes;
                         for (let { name, value } of attributesTemplate) {
-                            if (name.startsWith('data-myopie-default-') && (12 < name.length)) {
+                            if (name.startsWith('dataCurrent-myopie-default-') && (12 < name.length)) {
                                 const realName = name.substr(12);
                                 if (null === attributesExistings.getNamedItem(realName)) {
                                     nodesExisting[indexFL].setAttribute(realName, value);
                                 }
                             }
                             else {
-                                nodesExisting[indexFL].setAttribute(name, value);
+                                if ((-1 === ['input', 'option', 'textarea'].indexOf(nodesExisting[indexFL].tagName)) ||
+                                    (-1 === ['value', 'selected', 'checked'].indexOf(name)) ||
+                                    (null === attributesExistings.getNamedItem(name))) {
+                                    nodesExisting[indexFL].setAttribute(name, value);
+                                }
                             }
                         }
-                        for (let { name, value } of attributesExistings) {
+                        for (let { name } of attributesExistings) {
                             if (null === attributesTemplate.getNamedItem(name)) {
                                 nodesExisting[indexFL].removeAttribute(name);
                             }
@@ -97,23 +105,38 @@ class myopie {
             }
         }
     }
+    HookAddPre(hookFunction) {
+        this.hooks.pre.push(hookFunction);
+    }
+    HookAddPost(hookFunction) {
+        this.hooks.post.push(hookFunction);
+    }
     render() {
         this.timer = null;
         const htmlExisting = document.querySelector(this.selector);
         if (null != htmlExisting) {
+            let countFL = this.hooks.pre.length;
+            for (let indexFL = 0; indexFL < countFL; indexFL++) {
+                this.hooks.pre[indexFL](this.dataCurrent, this.dataPrevious);
+            }
             const parser = new DOMParser();
-            let tmpValue = parser.parseFromString(this.template(this.data), 'text/html');
+            let tmpValue = parser.parseFromString(this.template(this.dataCurrent), 'text/html');
             if (tmpValue.head && tmpValue.head.childNodes && tmpValue.head.childNodes.length) {
                 Array.from(tmpValue.head.childNodes).reverse().forEach(function (node) { tmpValue.body.insertBefore(node, tmpValue.body.firstChild); });
             }
             const htmlTemplate = (tmpValue && tmpValue.body) ? tmpValue.body : document.createElement('body');
             this.DiffNode(htmlTemplate, htmlExisting);
+            countFL = this.hooks.post.length;
+            for (let indexFL = 0; indexFL < countFL; indexFL++) {
+                this.hooks.post[indexFL](this.dataCurrent, this.dataPrevious);
+            }
+            this.dataPrevious = null;
         }
         else {
         }
     }
     get(path) {
-        let returnValue = this.data;
+        let returnValue = this.dataCurrent;
         if (null != path) {
             let components = path.split(/(?<!(?<!\\)\\)\//);
             const lenFL = components.length;
@@ -135,7 +158,10 @@ class myopie {
         return returnValue;
     }
     set(path, value, render = true) {
-        let tmpValue = this.data;
+        if (null === this.dataPrevious) {
+            this.dataPrevious = Object.assign({}, this.dataCurrent);
+        }
+        let tmpValue = this.dataCurrent;
         let components = path.split(/(?<!(?<!\\)\\)\//);
         const lenFL = components.length;
         for (let indexFL = 0; indexFL < lenFL - 1; indexFL++) {
