@@ -1,14 +1,15 @@
 "use strict";
 class myopie {
-    constructor(selector, template, inputToPath = [], timeout = 1000) {
+    constructor(selector, template, initialData = {}, inputToPath = [], timeout = 1000) {
         this.timer = null;
         this.dataCurrent = {};
         this.dataPrevious = null;
-        this.hooks = { pre: [], post: [] };
+        this.hooks = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
         this.selector = selector;
         this.template = template;
         this.timeout = timeout;
         this.inputToPath = inputToPath;
+        this.dataCurrent = myopie.DeepClone(initialData);
         document.addEventListener('input', (e) => {
             const event = e;
             const countFL = this.inputToPath.length;
@@ -31,9 +32,55 @@ class myopie {
                 }
             }
         });
+        let countFL = this.hooks.init.pre.length;
+        for (let indexFL = 0; indexFL < countFL; indexFL++) {
+            this.hooks.init.post[indexFL](this.dataCurrent, {});
+        }
+        this.render();
+        countFL = this.hooks.init.post.length;
+        for (let indexFL = 0; indexFL < countFL; indexFL++) {
+            this.hooks.init.post[indexFL](this.dataCurrent, {});
+        }
     }
-    static Create(selector, template, inputToPath = [], timeout = 1000) {
-        return new myopie(selector, template, inputToPath, timeout);
+    static Create(selector, template, initialData = {}, inputToPath = [], timeout = 1000) {
+        return new myopie(selector, template, initialData, inputToPath, timeout);
+    }
+    static DeepClone(obj) {
+        let returnValue = null;
+        if (typeof obj == 'function') {
+            returnValue = obj;
+        }
+        returnValue = Array.isArray(obj) ? [] : {};
+        for (var key in obj) {
+            var value = obj[key];
+            var type = {}.toString.call(value).slice(8, -1);
+            if (type == 'Array' || type == 'Object') {
+                returnValue[key] = myopie.DeepClone(value);
+            }
+            else if (type == 'Date') {
+                returnValue[key] = new Date(value.getTime());
+            }
+            else if (type == 'RegExp') {
+                let flags = '';
+                if (typeof value.source.flags == 'string') {
+                    flags = value.source.flags;
+                }
+                else {
+                    let tmpValue = [];
+                    value.global && tmpValue.push('g');
+                    value.ignoreCase && tmpValue.push('i');
+                    value.multiline && tmpValue.push('m');
+                    value.sticky && tmpValue.push('y');
+                    value.unicode && tmpValue.push('u');
+                    flags = tmpValue.join('');
+                }
+                returnValue[key] = RegExp(value.source, flags);
+            }
+            else {
+                returnValue[key] = value;
+            }
+        }
+        return returnValue;
     }
     static SameNode(node1, node2) {
         return ((node1.nodeType === node2.nodeType) &&
@@ -105,19 +152,25 @@ class myopie {
             }
         }
     }
-    HookAddPre(hookFunction) {
-        this.hooks.pre.push(hookFunction);
+    HooksInitAddPre(hookFunction) {
+        this.hooks.init.pre.push(hookFunction);
     }
-    HookAddPost(hookFunction) {
-        this.hooks.post.push(hookFunction);
+    HooksInitAddPost(hookFunction) {
+        this.hooks.init.post.push(hookFunction);
+    }
+    HooksRenderAddPre(hookFunction) {
+        this.hooks.render.pre.push(hookFunction);
+    }
+    HooksRenderAddPost(hookFunction) {
+        this.hooks.render.post.push(hookFunction);
     }
     render() {
         this.timer = null;
         const htmlExisting = document.querySelector(this.selector);
         if (null != htmlExisting) {
-            let countFL = this.hooks.pre.length;
+            let countFL = this.hooks.render.pre.length;
             for (let indexFL = 0; indexFL < countFL; indexFL++) {
-                this.hooks.pre[indexFL](this.dataCurrent, this.dataPrevious);
+                this.hooks.render.pre[indexFL](this.dataCurrent, this.dataPrevious);
             }
             const parser = new DOMParser();
             let tmpValue = parser.parseFromString(this.template(this.dataCurrent), 'text/html');
@@ -126,9 +179,9 @@ class myopie {
             }
             const htmlTemplate = (tmpValue && tmpValue.body) ? tmpValue.body : document.createElement('body');
             this.DiffNode(htmlTemplate, htmlExisting);
-            countFL = this.hooks.post.length;
+            countFL = this.hooks.render.post.length;
             for (let indexFL = 0; indexFL < countFL; indexFL++) {
-                this.hooks.post[indexFL](this.dataCurrent, this.dataPrevious);
+                this.hooks.render.post[indexFL](this.dataCurrent, this.dataPrevious);
             }
             this.dataPrevious = null;
         }
@@ -159,7 +212,7 @@ class myopie {
     }
     set(path, value, render = true) {
         if (null === this.dataPrevious) {
-            this.dataPrevious = Object.assign({}, this.dataCurrent);
+            this.dataPrevious = myopie.DeepClone(this.dataCurrent);
         }
         let tmpValue = this.dataCurrent;
         let components = path.split(/(?<!(?<!\\)\\)\//);
