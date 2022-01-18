@@ -17,21 +17,17 @@ class myopie {
 	private dataCurrent: any = {};
 	private dataPrevious: any = null;
 	private hooks: {
-		init: {
-			pre: ( ( dataCurrent: any, dataPrevious: any ) => void )[],
-			post: ( ( dataCurrent: any, dataPrevious: any ) => void )[]
-		},
 		render: {
 			pre: ( ( dataCurrent: any, dataPrevious: any ) => void )[],
 			post: ( ( dataCurrent: any, dataPrevious: any ) => void )[]
 		}
-	} = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
+	} = { render: { pre: [], post: [] } };
 
-	public static Create( selector: string, template: ( data: any ) => string, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 1000 ): myopie {
-		return new myopie( selector, template, initialData, inputToPath, timeout );
+	public static Create( selector: string, template: ( data: any ) => string, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 1000, init: { pre?: ( ( dataCurrent: any ) => void )[], post?: ( ( dataCurrent: any ) => void )[] } = {} ): myopie {
+		return new myopie( selector, template, initialData, inputToPath, timeout, init );
 	}
 
-	private constructor( selector: string, template: ( data: any ) => string, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 1000 ) {
+	private constructor( selector: string, template: ( data: any ) => string, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 1000, init: { pre?: ( ( dataCurrent: any ) => void )[], post?: ( ( dataCurrent: any ) => void )[] } = {} ) {
 		this.selector = selector;
 		this.template = template;
 		this.timeout = timeout;
@@ -60,14 +56,18 @@ class myopie {
 				}
 			}
 		} );
-		let countFL = this.hooks.init.pre.length;
-		for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
-			this.hooks.init.post[ indexFL ]( this.dataCurrent, {} );
+		if( init && init.pre && Array.isArray( init.pre ) && init.pre.length ) {
+			const countFL = init.pre.length;
+			for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
+				init.pre[ indexFL ]( this.dataCurrent );
+			}
 		}
 		this.render();
-		countFL = this.hooks.init.post.length;
-		for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
-			this.hooks.init.post[ indexFL ]( this.dataCurrent, {} );
+		if( init && init.post && Array.isArray( init.post ) && init.post.length ) {
+			const countFL = init.post.length;
+			for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
+				init.post[ indexFL ]( this.dataCurrent );
+			}
 		}
 	}
 
@@ -79,10 +79,10 @@ class myopie {
 			returnValue = obj;
 		}
 		returnValue = Array.isArray( obj ) ? [] : {};
-		for( var key in obj ) {
+		for( let key in obj ) {
 			// include prototype properties
-			var value = obj[ key ];
-			var type = {}.toString.call( value ).slice( 8, -1 );
+			let value = obj[ key ];
+			let type = {}.toString.call( value ).slice( 8, -1 );
 			if( type == 'Array' || type == 'Object' ) {
 				returnValue[ key ] = myopie.DeepClone( value );
 			} else if( type == 'Date' ) {
@@ -178,14 +178,6 @@ class myopie {
 				}
 			}
 		}
-	}
-
-	public HooksInitAddPre( hookFunction: ( ( dataCurrent: any, dataPrevious: any ) => void ) ) {
-		this.hooks.init.pre.push( hookFunction );
-	}
-
-	public HooksInitAddPost( hookFunction: ( ( dataCurrent: any, dataPrevious: any ) => void ) ) {
-		this.hooks.init.post.push( hookFunction );
 	}
 
 	public HooksRenderAddPre( hookFunction: ( ( dataCurrent: any, dataPrevious: any ) => void ) ) {
