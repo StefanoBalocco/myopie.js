@@ -1,10 +1,11 @@
 "use strict";
 class myopie {
-    constructor(selector, template, initialData = {}, inputToPath = [], timeout = 1000, init = {}) {
+    constructor(selector, template, initialData = {}, inputToPath = [], timeout = 1000) {
         this.timer = null;
         this.dataCurrent = {};
         this.dataPrevious = null;
-        this.hooks = { render: { pre: [], post: [] } };
+        this.inited = false;
+        this.hooks = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
         this.selector = selector;
         this.template = template;
         this.timeout = timeout;
@@ -32,56 +33,61 @@ class myopie {
                 }
             }
         });
-        if (init && init.pre && Array.isArray(init.pre) && init.pre.length) {
-            const countFL = init.pre.length;
-            for (let indexFL = 0; indexFL < countFL; indexFL++) {
-                init.pre[indexFL](this.dataCurrent);
-            }
-        }
-        this.render();
-        if (init && init.post && Array.isArray(init.post) && init.post.length) {
-            const countFL = init.post.length;
-            for (let indexFL = 0; indexFL < countFL; indexFL++) {
-                init.post[indexFL](this.dataCurrent);
-            }
-        }
     }
-    static Create(selector, template, initialData = {}, inputToPath = [], timeout = 1000, init = {}) {
-        return new myopie(selector, template, initialData, inputToPath, timeout, init);
+    static Create(selector, template, initialData = {}, inputToPath = [], timeout = 1000) {
+        return new myopie(selector, template, initialData, inputToPath, timeout);
     }
     static DeepClone(obj) {
         let returnValue = null;
-        if (typeof obj == 'function') {
-            returnValue = obj;
-        }
-        returnValue = Array.isArray(obj) ? [] : {};
-        for (let key in obj) {
-            let value = obj[key];
-            let type = {}.toString.call(value).slice(8, -1);
-            if (type == 'Array' || type == 'Object') {
-                returnValue[key] = myopie.DeepClone(value);
+        const sourceType = (typeof obj);
+        switch (sourceType) {
+            case 'undefined':
+            case 'boolean':
+            case 'number':
+            case 'bigint':
+            case 'string':
+            case 'symbol':
+            case 'function': {
+                returnValue = obj;
+                break;
             }
-            else if (type == 'Date') {
-                returnValue[key] = new Date(value.getTime());
-            }
-            else if (type == 'RegExp') {
-                let flags = '';
-                if (typeof value.source.flags == 'string') {
-                    flags = value.source.flags;
+            case 'object': {
+                if (null === obj) {
+                    returnValue = null;
                 }
                 else {
-                    let tmpValue = [];
-                    value.global && tmpValue.push('g');
-                    value.ignoreCase && tmpValue.push('i');
-                    value.multiline && tmpValue.push('m');
-                    value.sticky && tmpValue.push('y');
-                    value.unicode && tmpValue.push('u');
-                    flags = tmpValue.join('');
+                    returnValue = Array.isArray(obj) ? [] : {};
+                    for (let key in obj) {
+                        let value = obj[key];
+                        let type = {}.toString.call(value).slice(8, -1);
+                        if (type == 'Array' || type == 'Object') {
+                            returnValue[key] = myopie.DeepClone(value);
+                        }
+                        else if (type == 'Date') {
+                            returnValue[key] = new Date(value.getTime());
+                        }
+                        else if (type == 'RegExp') {
+                            let flags = '';
+                            if (typeof value.source.flags == 'string') {
+                                flags = value.source.flags;
+                            }
+                            else {
+                                let tmpValue = [];
+                                value.global && tmpValue.push('g');
+                                value.ignoreCase && tmpValue.push('i');
+                                value.multiline && tmpValue.push('m');
+                                value.sticky && tmpValue.push('y');
+                                value.unicode && tmpValue.push('u');
+                                flags = tmpValue.join('');
+                            }
+                            returnValue[key] = RegExp(value.source, flags);
+                        }
+                        else {
+                            returnValue[key] = value;
+                        }
+                    }
                 }
-                returnValue[key] = RegExp(value.source, flags);
-            }
-            else {
-                returnValue[key] = value;
+                break;
             }
         }
         return returnValue;
@@ -156,6 +162,12 @@ class myopie {
             }
         }
     }
+    HooksInitAddPre(hookFunction) {
+        this.hooks.init.pre.push(hookFunction);
+    }
+    HooksInitAddPost(hookFunction) {
+        this.hooks.init.post.push(hookFunction);
+    }
     HooksRenderAddPre(hookFunction) {
         this.hooks.render.pre.push(hookFunction);
     }
@@ -166,7 +178,14 @@ class myopie {
         this.timer = null;
         const htmlExisting = document.querySelector(this.selector);
         if (null != htmlExisting) {
-            let countFL = this.hooks.render.pre.length;
+            let countFL = null;
+            if (!this.inited) {
+                countFL = this.hooks.init.pre.length;
+                for (let indexFL = 0; indexFL < countFL; indexFL++) {
+                    this.hooks.init.pre[indexFL](this.dataCurrent);
+                }
+            }
+            countFL = this.hooks.render.pre.length;
             for (let indexFL = 0; indexFL < countFL; indexFL++) {
                 this.hooks.render.pre[indexFL](this.dataCurrent, this.dataPrevious);
             }
@@ -177,6 +196,13 @@ class myopie {
             }
             const htmlTemplate = (tmpValue && tmpValue.body) ? tmpValue.body : document.createElement('body');
             this.DiffNode(htmlTemplate, htmlExisting);
+            if (!this.inited) {
+                countFL = this.hooks.init.post.length;
+                for (let indexFL = 0; indexFL < countFL; indexFL++) {
+                    this.hooks.init.post[indexFL](this.dataCurrent);
+                }
+                this.inited = true;
+            }
             countFL = this.hooks.render.post.length;
             for (let indexFL = 0; indexFL < countFL; indexFL++) {
                 this.hooks.render.post[indexFL](this.dataCurrent, this.dataPrevious);

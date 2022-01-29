@@ -16,18 +16,23 @@ class myopie {
 	private timer: ( number | null ) = null;
 	private dataCurrent: any = {};
 	private dataPrevious: any = null;
+	private inited: boolean = false;
 	private hooks: {
+		init: {
+			pre: ( ( dataCurrent: any ) => void )[],
+			post: ( ( dataCurrent: any ) => void )[],
+		},
 		render: {
 			pre: ( ( dataCurrent: any, dataPrevious: any ) => void )[],
 			post: ( ( dataCurrent: any, dataPrevious: any ) => void )[]
 		}
-	} = { render: { pre: [], post: [] } };
+	} = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
 
-	public static Create( selector: string, template: ( data: any ) => string, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 1000, init: { pre?: ( ( dataCurrent: any ) => void )[], post?: ( ( dataCurrent: any ) => void )[] } = {} ): myopie {
-		return new myopie( selector, template, initialData, inputToPath, timeout, init );
+	public static Create( selector: string, template: ( data: any ) => string, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 1000 ): myopie {
+		return new myopie( selector, template, initialData, inputToPath, timeout );
 	}
 
-	private constructor( selector: string, template: ( data: any ) => string, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 1000, init: { pre?: ( ( dataCurrent: any ) => void )[], post?: ( ( dataCurrent: any ) => void )[] } = {} ) {
+	private constructor( selector: string, template: ( data: any ) => string, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 1000 ) {
 		this.selector = selector;
 		this.template = template;
 		this.timeout = timeout;
@@ -56,53 +61,57 @@ class myopie {
 				}
 			}
 		} );
-		if( init && init.pre && Array.isArray( init.pre ) && init.pre.length ) {
-			const countFL = init.pre.length;
-			for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
-				init.pre[ indexFL ]( this.dataCurrent );
-			}
-		}
-		this.render();
-		if( init && init.post && Array.isArray( init.post ) && init.post.length ) {
-			const countFL = init.post.length;
-			for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
-				init.post[ indexFL ]( this.dataCurrent );
-			}
-		}
 	}
 
 	// Ripped from https://github.com/angus-c/just
 	// Package: collection-clone
 	static DeepClone( obj: any ): any {
 		let returnValue: any = null;
-		if( typeof obj == 'function' ) {
-			returnValue = obj;
-		}
-		returnValue = Array.isArray( obj ) ? [] : {};
-		for( let key in obj ) {
-			// include prototype properties
-			let value = obj[ key ];
-			let type = {}.toString.call( value ).slice( 8, -1 );
-			if( type == 'Array' || type == 'Object' ) {
-				returnValue[ key ] = myopie.DeepClone( value );
-			} else if( type == 'Date' ) {
-				returnValue[ key ] = new Date( value.getTime() );
-			} else if( type == 'RegExp' ) {
-				let flags: string = '';
-				if( typeof value.source.flags == 'string' ) {
-					flags = value.source.flags;
+		const sourceType = ( typeof obj );
+		switch( sourceType ) {
+			case 'undefined':
+			case 'boolean':
+			case 'number':
+			case 'bigint':
+			case 'string':
+			case 'symbol':
+			case 'function': {
+				returnValue = obj;
+				break;
+			}
+			case 'object': {
+				if( null === obj ) {
+					returnValue = null;
 				} else {
-					let tmpValue: string[] = [];
-					value.global && tmpValue.push( 'g' );
-					value.ignoreCase && tmpValue.push( 'i' );
-					value.multiline && tmpValue.push( 'm' );
-					value.sticky && tmpValue.push( 'y' );
-					value.unicode && tmpValue.push( 'u' );
-					flags = tmpValue.join( '' );
+					returnValue = Array.isArray( obj ) ? [] : {};
+					for( let key in obj ) {
+						// include prototype properties
+						let value = obj[ key ];
+						let type = {}.toString.call( value ).slice( 8, -1 );
+						if( type == 'Array' || type == 'Object' ) {
+							returnValue[ key ] = myopie.DeepClone( value );
+						} else if( type == 'Date' ) {
+							returnValue[ key ] = new Date( value.getTime() );
+						} else if( type == 'RegExp' ) {
+							let flags: string = '';
+							if( typeof value.source.flags == 'string' ) {
+								flags = value.source.flags;
+							} else {
+								let tmpValue: string[] = [];
+								value.global && tmpValue.push( 'g' );
+								value.ignoreCase && tmpValue.push( 'i' );
+								value.multiline && tmpValue.push( 'm' );
+								value.sticky && tmpValue.push( 'y' );
+								value.unicode && tmpValue.push( 'u' );
+								flags = tmpValue.join( '' );
+							}
+							returnValue[ key ] = RegExp( value.source, flags );
+						} else {
+							returnValue[ key ] = value;
+						}
+					}
 				}
-				returnValue[ key ] = RegExp( value.source, flags );
-			} else {
-				returnValue[ key ] = value;
+				break;
 			}
 		}
 		return returnValue;
@@ -180,6 +189,14 @@ class myopie {
 		}
 	}
 
+	public HooksInitAddPre( hookFunction: ( ( dataCurrent: any ) => void ) ) {
+		this.hooks.init.pre.push( hookFunction );
+	}
+
+	public HooksInitAddPost( hookFunction: ( ( dataCurrent: any ) => void ) ) {
+		this.hooks.init.post.push( hookFunction );
+	}
+
 	public HooksRenderAddPre( hookFunction: ( ( dataCurrent: any, dataPrevious: any ) => void ) ) {
 		this.hooks.render.pre.push( hookFunction );
 	}
@@ -192,7 +209,14 @@ class myopie {
 		this.timer = null;
 		const htmlExisting = document.querySelector<Element>( this.selector );
 		if( null != htmlExisting ) {
-			let countFL = this.hooks.render.pre.length;
+			let countFL = null;
+			if( !this.inited ) {
+				countFL = this.hooks.init.pre.length;
+				for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
+					this.hooks.init.pre[ indexFL ]( this.dataCurrent );
+				}
+			}
+			countFL = this.hooks.render.pre.length;
 			for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
 				this.hooks.render.pre[ indexFL ]( this.dataCurrent, this.dataPrevious );
 			}
@@ -203,6 +227,13 @@ class myopie {
 			}
 			const htmlTemplate = ( tmpValue && tmpValue.body ) ? tmpValue.body : document.createElement( 'body' );
 			this.DiffNode( htmlTemplate, htmlExisting );
+			if( !this.inited ) {
+				countFL = this.hooks.init.post.length;
+				for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
+					this.hooks.init.post[ indexFL ]( this.dataCurrent );
+				}
+				this.inited = true;
+			}
 			countFL = this.hooks.render.post.length;
 			for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
 				this.hooks.render.post[ indexFL ]( this.dataCurrent, this.dataPrevious );
@@ -256,6 +287,4 @@ class myopie {
 			this.timer = setTimeout( () => this.render(), this.timeout );
 		}
 	}
-
-	// before render e after render
 }

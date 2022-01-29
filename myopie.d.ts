@@ -10,15 +10,15 @@ declare class myopie {
     private timer;
     private dataCurrent;
     private dataPrevious;
+    private inited;
     private hooks;
-    static Create(selector: string, template: (data: any) => string, initialData?: any, inputToPath?: string[][], timeout?: number, init?: {
-        pre?: ((dataCurrent: any) => void)[];
-        post?: ((dataCurrent: any) => void)[];
-    }): myopie;
+    static Create(selector: string, template: (data: any) => string, initialData?: any, inputToPath?: string[][], timeout?: number): myopie;
     private constructor();
     static DeepClone(obj: any): any;
     static SameNode(node1: Element, node2: Element): boolean;
     private DiffNode;
+    HooksInitAddPre(hookFunction: ((dataCurrent: any) => void)): void;
+    HooksInitAddPost(hookFunction: ((dataCurrent: any) => void)): void;
     HooksRenderAddPre(hookFunction: ((dataCurrent: any, dataPrevious: any) => void)): void;
     HooksRenderAddPost(hookFunction: ((dataCurrent: any, dataPrevious: any) => void)): void;
     render(): void;
