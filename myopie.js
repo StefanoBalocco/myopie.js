@@ -1,16 +1,15 @@
 "use strict";
 class myopie {
-    constructor(selector, template, initialData = {}, inputToPath = [], timeoutRender, timeoutResize) {
-        this.timeout = { render: 0, resize: 0 };
-        this.timer = { render: undefined, resize: undefined };
+    constructor(selector, template, initialData = {}, inputToPath = [], timeout) {
+        this.timeout = 0;
+        this.timer = undefined;
         this.dataCurrent = {};
         this.dataPrevious = null;
         this.inited = false;
-        this.hooks = { init: { pre: [], post: [] }, render: { pre: [], post: [] }, resize: { pre: [], post: [] } };
+        this.hooks = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
         this.selector = selector;
         this.template = template;
-        this.timeout.render = timeoutRender;
-        this.timeout.resize = timeoutResize;
+        this.timeout = timeout;
         this.inputToPath = inputToPath;
         this.dataCurrent = myopie.DeepClone(initialData);
         document.addEventListener('input', (e) => {
@@ -36,8 +35,8 @@ class myopie {
             }
         });
     }
-    static Create(selector, template, initialData = {}, inputToPath = [], timeoutRender = 1000, timeoutResize) {
-        return new myopie(selector, template, initialData, inputToPath, timeoutRender, timeoutResize);
+    static Create(selector, template, initialData = {}, inputToPath = [], timeout = 1000) {
+        return new myopie(selector, template, initialData, inputToPath, timeout);
     }
     static DeepClone(obj) {
         let returnValue = null;
@@ -107,48 +106,18 @@ class myopie {
                     !node1.href && !node2.href &&
                     !node1.className && !node2.className)));
     }
-    DiffNode(nodeTemplate, nodeExisting) {
-        var _a, _b, _c, _d, _e;
+    DiffNode(nodeTemplate, nodeExisting, ignore) {
+        var _a, _b;
         const nodesTemplate = nodeTemplate.childNodes;
         const nodesExisting = nodeExisting.childNodes;
-        const masonry = {
-            enabled: ('true' === ((_b = (_a = nodeTemplate.attributes) === null || _a === void 0 ? void 0 : _a.getNamedItem('data-myopie-masonry')) === null || _b === void 0 ? void 0 : _b.value)),
-            changes: false,
-            widthContainer: 0, positionLeft: 0, columns: 0,
-            widthColumn: 0, widthGutter: 0, heightGutter: 0,
-            heightColumns: []
-        };
-        if (masonry.enabled && nodesTemplate.length) {
-            const containerComputedSize = getComputedStyle(nodeExisting);
-            masonry.widthContainer = nodeExisting.clientWidth - parseFloat(containerComputedSize.paddingLeft) - parseFloat(containerComputedSize.paddingRight);
-            const temporaryItem = document.createElement('div');
-            temporaryItem.style.visibility = 'hidden';
-            temporaryItem.className = 'myopie-masonry-column';
-            nodeExisting.appendChild(temporaryItem);
-            masonry.widthColumn = temporaryItem.offsetWidth;
-            nodeExisting.removeChild(temporaryItem);
-            temporaryItem.className = 'myopie-masonry-gutter';
-            nodeExisting.appendChild(temporaryItem);
-            masonry.widthGutter = temporaryItem.offsetWidth;
-            masonry.heightGutter = temporaryItem.offsetHeight;
-            nodeExisting.removeChild(temporaryItem);
-            masonry.columns = 1 + Math.floor((masonry.widthContainer - masonry.widthColumn) / (masonry.widthColumn + masonry.widthGutter));
-            masonry.positionLeft = (masonry.widthContainer - (((masonry.columns - 1) * (masonry.widthColumn + masonry.widthGutter)) + masonry.widthColumn)) / 2;
-            nodeExisting.style.position = 'relative';
-            for (let indexFL = 0; indexFL < masonry.columns; indexFL++) {
-                masonry.heightColumns[indexFL] = 0;
-            }
-        }
         for (let indexFL = 0; indexFL < nodesTemplate.length; indexFL++) {
             const tmpItem = nodesTemplate[indexFL];
             let currentItem;
-            if ((indexFL >= nodesExisting.length) &&
-                ((1 !== tmpItem.nodeType) || (('true' !== ((_d = (_c = tmpItem.attributes) === null || _c === void 0 ? void 0 : _c.getNamedItem('data-myopie-masonry')) === null || _d === void 0 ? void 0 : _d.value)) &&
-                    (null === tmpItem.querySelector('[data-myopie-masonry="true"]'))))) {
+            if (nodesExisting.length <= indexFL) {
                 currentItem = nodeExisting.appendChild(tmpItem.cloneNode(true));
             }
             else {
-                currentItem = (_e = nodesExisting[indexFL]) !== null && _e !== void 0 ? _e : nodeExisting.appendChild(tmpItem.cloneNode());
+                currentItem = nodesExisting[indexFL];
                 let skip = false;
                 if (!currentItem.isEqualNode(tmpItem)) {
                     if (!myopie.SimilarNode(tmpItem, currentItem)) {
@@ -168,8 +137,17 @@ class myopie {
                             currentItem.textContent = templateContent;
                         }
                         if (1 === tmpItem.nodeType) {
+                            if (!ignore) {
+                                ignore = { content: false, style: false };
+                            }
                             const attributesTemplate = tmpItem.attributes;
                             const attributesExistings = currentItem.attributes;
+                            if ('true' === ((_a = attributesTemplate.getNamedItem('data-myopie-ignore-content')) === null || _a === void 0 ? void 0 : _a.value)) {
+                                ignore.content = true;
+                            }
+                            if ('true' === ((_b = attributesTemplate.getNamedItem('data-myopie-ignore-style')) === null || _b === void 0 ? void 0 : _b.value)) {
+                                ignore.style = true;
+                            }
                             for (let { name, value } of attributesTemplate) {
                                 if (name.startsWith('data-myopie-default-') && (20 < name.length)) {
                                     const realName = name.substr(20);
@@ -178,77 +156,40 @@ class myopie {
                                     }
                                 }
                                 else {
-                                    if ((-1 === ['input', 'option', 'textarea'].indexOf(currentItem.tagName)) ||
-                                        (-1 === ['value', 'selected', 'checked'].indexOf(name)) ||
-                                        (null === attributesExistings.getNamedItem(name))) {
+                                    if (((!(ignore === null || ignore === void 0 ? void 0 : ignore.style) || 'style' != name) &&
+                                        ((-1 === ['input', 'option', 'textarea'].indexOf(currentItem.tagName)) ||
+                                            (-1 === ['value', 'selected', 'checked'].indexOf(name))))
+                                        ||
+                                            (null === attributesExistings.getNamedItem(name))) {
                                         currentItem.setAttribute(name, value);
                                     }
                                 }
                             }
                             for (let { name } of attributesExistings) {
                                 if (null === attributesTemplate.getNamedItem(name)) {
-                                    if (!masonry.enabled || (name !== 'style')) {
+                                    if (!(ignore === null || ignore === void 0 ? void 0 : ignore.style) || (name !== 'style')) {
                                         currentItem.removeAttribute(name);
                                     }
                                 }
                             }
-                        }
-                        if (!tmpItem.childNodes.length && currentItem.childNodes.length) {
-                            currentItem.innerHTML = '';
-                        }
-                        else if (!currentItem.childNodes.length && tmpItem.childNodes.length) {
-                            this.DiffNode(tmpItem, currentItem);
-                        }
-                        else {
-                            this.DiffNode(tmpItem, currentItem);
-                        }
-                        for (let indexSL = (nodesExisting.length - nodesTemplate.length); indexSL > 0; indexSL--) {
-                            nodesExisting[nodesExisting.length - 1].remove();
-                        }
-                    }
-                }
-            }
-            if (masonry.enabled && (1 === currentItem.nodeType)) {
-                let column = 0;
-                if (indexFL < masonry.columns) {
-                    column = indexFL;
-                }
-                else {
-                    let tmpValue = masonry.heightColumns[0];
-                    for (let indexSL = 1; indexSL < masonry.columns; indexSL++) {
-                        if (masonry.heightColumns[indexSL] < tmpValue) {
-                            tmpValue = masonry.heightColumns[indexSL];
-                            column = indexSL;
+                            if (!ignore.content) {
+                                if (!tmpItem.childNodes.length && currentItem.childNodes.length) {
+                                    currentItem.innerHTML = '';
+                                }
+                                else if (!currentItem.childNodes.length && tmpItem.childNodes.length) {
+                                    this.DiffNode(tmpItem, currentItem, ignore);
+                                }
+                                else {
+                                    this.DiffNode(tmpItem, currentItem, ignore);
+                                }
+                                for (let indexSL = (nodesExisting.length - nodesTemplate.length); indexSL > 0; indexSL--) {
+                                    nodesExisting[nodesExisting.length - 1].remove();
+                                }
+                            }
                         }
                     }
                 }
-                if (0 < masonry.heightColumns[column]) {
-                    masonry.heightColumns[column] += masonry.heightGutter;
-                }
-                if (masonry.changes || !currentItem.style.position) {
-                    currentItem.style.transition = '';
-                    currentItem.style.width = '0';
-                    currentItem.style.transition = 'width 0.5s';
-                    masonry.changes = true;
-                    let left = masonry.positionLeft;
-                    currentItem.style.position = 'absolute';
-                    currentItem.style.width = masonry.widthColumn + 'px';
-                    left += column * (masonry.widthColumn + masonry.widthGutter);
-                    currentItem.style.left = left + (0 < left ? 'px' : '');
-                    let top = masonry.heightColumns[column];
-                    currentItem.style.top = top + (0 < top ? 'px' : '');
-                }
-                masonry.heightColumns[column] += currentItem.offsetHeight;
             }
-        }
-        if (masonry.enabled) {
-            let tmpValue = masonry.heightColumns[0];
-            for (let indexSL = 1; indexSL < masonry.columns; indexSL++) {
-                if (masonry.heightColumns[indexSL] > tmpValue) {
-                    tmpValue = masonry.heightColumns[indexSL];
-                }
-            }
-            nodeExisting.style.height = tmpValue + 'px';
         }
     }
     HooksInitAddPre(hookFunction) {
@@ -263,26 +204,8 @@ class myopie {
     HooksRenderAddPost(hookFunction) {
         this.hooks.render.post.push(hookFunction);
     }
-    resize() {
-        this.timer.resize = undefined;
-        const htmlExisting = document.querySelector(this.selector);
-        if (null != htmlExisting) {
-            const masonryElements = document.querySelectorAll(this.selector + ' [data-myopie-masonry="true"]');
-            let countFL = masonryElements.length;
-            for (let indexFL = 0; indexFL < countFL; indexFL++) {
-                let countSL = this.hooks.resize.pre.length;
-                for (let indexSL = 0; indexSL < countSL; indexSL++) {
-                    this.hooks.resize.pre[indexSL](this.dataCurrent);
-                }
-                countSL = this.hooks.resize.post.length;
-                for (let indexSL = 0; indexSL < countSL; indexSL++) {
-                    this.hooks.resize.post[indexSL](this.dataCurrent);
-                }
-            }
-        }
-    }
     render() {
-        this.timer.render = undefined;
+        this.timer = undefined;
         const htmlExisting = document.querySelector(this.selector);
         if (null != htmlExisting) {
             if (!this.inited) {
@@ -360,11 +283,11 @@ class myopie {
         }
         tmpValue[components[lenFL - 1]] = value;
         if (render) {
-            if (this.timeout.render > 0) {
-                if ('undefined' != typeof this.timer.render) {
-                    clearTimeout(this.timer.render);
+            if (this.timeout > 0) {
+                if ('undefined' != typeof this.timer) {
+                    clearTimeout(this.timer);
                 }
-                this.timer.render = setTimeout(() => this.render(), this.timeout.render);
+                this.timer = setTimeout(() => this.render(), this.timeout);
             }
             else {
                 this.render();
