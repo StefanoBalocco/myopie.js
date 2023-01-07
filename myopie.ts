@@ -184,18 +184,10 @@ class myopie {
 										currentItem.setAttribute( realName, value );
 									}
 								} else {
-									if(
-										(
-											( !ignore?.style || 'style' != name ) &&
-											(
-												( -1 === [ 'input', 'option', 'textarea' ].indexOf( currentItem.tagName ) ) ||
-												( -1 === [ 'value', 'selected', 'checked' ].indexOf( name ) )
-											)
-										)
-										||
-										( null === attributesExistings.getNamedItem( name ) )
-									) {
-										currentItem.setAttribute( name, value );
+									if( !name.startsWith( 'data-myopie-' ) ) {
+										if( ( ( !ignore?.style || 'style' != name ) && ( ( -1 === [ 'input', 'option', 'textarea' ].indexOf( currentItem.tagName ) ) || ( -1 === [ 'value', 'selected', 'checked' ].indexOf( name ) ) ) ) || ( null === attributesExistings.getNamedItem( name ) ) ) {
+											currentItem.setAttribute( name, value );
+										}
 									}
 								}
 							}
