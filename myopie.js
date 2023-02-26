@@ -14,21 +14,20 @@ class myopie {
         this.dataCurrent = myopie.DeepClone(initialData);
         document.addEventListener('input', (e) => {
             const event = e;
-            const countFL = this.inputToPath.length;
             let found = false;
-            for (let indexFL = 0; !found && indexFL < countFL; indexFL++) {
-                if (event && event.target && event.target.matches(this.inputToPath[indexFL][0])) {
+            for (let iFL = 0, cFL = this.inputToPath.length; !found && iFL < cFL; iFL++) {
+                if (event && event.target && event.target.matches(this.inputToPath[iFL][0])) {
                     switch (event.target.type) {
                         case 'checkbox': {
-                            this.set(this.inputToPath[indexFL][1], event.target.checked, false);
+                            this.set(this.inputToPath[iFL][1], event.target.checked, false);
                             break;
                         }
                         case 'radio': {
-                            this.set(this.inputToPath[indexFL][1], event.target.checked, false);
+                            this.set(this.inputToPath[iFL][1], event.target.checked, false);
                             break;
                         }
                         default: {
-                            this.set(this.inputToPath[indexFL][1], event.target.value, false);
+                            this.set(this.inputToPath[iFL][1], event.target.value, false);
                         }
                     }
                 }
@@ -110,24 +109,24 @@ class myopie {
         var _a, _b;
         const nodesTemplate = nodeTemplate.childNodes;
         const nodesExisting = nodeExisting.childNodes;
-        for (let indexFL = 0; indexFL < nodesTemplate.length; indexFL++) {
-            const tmpItem = nodesTemplate[indexFL];
+        for (let iFL = 0; iFL < nodesTemplate.length; iFL++) {
+            const tmpItem = nodesTemplate[iFL];
             let currentItem;
-            if (nodesExisting.length <= indexFL) {
+            if (nodesExisting.length <= iFL) {
                 currentItem = nodeExisting.appendChild(tmpItem.cloneNode(true));
             }
             else {
-                currentItem = nodesExisting[indexFL];
+                currentItem = nodesExisting[iFL];
                 let skip = false;
                 if (!currentItem.isEqualNode(tmpItem)) {
                     if (!myopie.SimilarNode(tmpItem, currentItem)) {
-                        let ahead = Array.from(nodesExisting).slice(indexFL + 1).find((branch) => myopie.SimilarNode(tmpItem, branch));
+                        let ahead = Array.from(nodesExisting).slice(iFL + 1).find((branch) => myopie.SimilarNode(tmpItem, branch));
                         if (!ahead) {
-                            currentItem = nodeExisting.insertBefore(tmpItem.cloneNode(true), ((indexFL < nodesExisting.length) ? currentItem : null));
+                            currentItem = nodeExisting.insertBefore(tmpItem, ((iFL < nodesExisting.length) ? currentItem : null));
                             skip = true;
                         }
                         else {
-                            currentItem = nodeExisting.insertBefore(ahead.cloneNode(true), ((indexFL < nodesExisting.length) ? currentItem : null));
+                            currentItem = nodeExisting.insertBefore(ahead, ((iFL < nodesExisting.length) ? currentItem : null));
                         }
                     }
                     if (!skip) {
@@ -155,11 +154,9 @@ class myopie {
                                         currentItem.setAttribute(realName, value);
                                     }
                                 }
-                                else {
-                                    if (!name.startsWith('data-myopie-')) {
-                                        if (((!(ignore === null || ignore === void 0 ? void 0 : ignore.style) || 'style' != name) && ((-1 === ['input', 'option', 'textarea'].indexOf(currentItem.tagName)) || (-1 === ['value', 'selected', 'checked'].indexOf(name)))) || (null === attributesExistings.getNamedItem(name))) {
-                                            currentItem.setAttribute(name, value);
-                                        }
+                                else if (!name.startsWith('data-myopie-')) {
+                                    if (((!(ignore === null || ignore === void 0 ? void 0 : ignore.style) || 'style' != name) && ((-1 === ['input', 'option', 'textarea'].indexOf(currentItem.tagName)) || (-1 === ['value', 'selected', 'checked'].indexOf(name)))) || (null === attributesExistings.getNamedItem(name))) {
+                                        currentItem.setAttribute(name, value);
                                     }
                                 }
                             }
@@ -175,12 +172,12 @@ class myopie {
                                     currentItem.innerHTML = '';
                                 }
                                 else if (!currentItem.childNodes.length && tmpItem.childNodes.length) {
-                                    this.DiffNode(tmpItem, currentItem, ignore);
+                                    this.DiffNode(tmpItem, currentItem, myopie.DeepClone(ignore));
                                 }
                                 else {
-                                    this.DiffNode(tmpItem, currentItem, ignore);
+                                    this.DiffNode(tmpItem, currentItem, myopie.DeepClone(ignore));
                                 }
-                                for (let indexSL = (nodesExisting.length - nodesTemplate.length); indexSL > 0; indexSL--) {
+                                for (let iSL = (nodesExisting.length - nodesTemplate.length); iSL > 0; iSL--) {
                                     nodesExisting[nodesExisting.length - 1].remove();
                                 }
                             }
@@ -203,19 +200,18 @@ class myopie {
         this.hooks.render.post.push(hookFunction);
     }
     render() {
+        var _a;
         this.timer = undefined;
         const htmlExisting = document.querySelector(this.selector);
         if (null != htmlExisting) {
             if (!this.inited) {
-                const countFL = this.hooks.init.pre.length;
-                for (let indexFL = 0; indexFL < countFL; indexFL++) {
-                    this.hooks.init.pre[indexFL](this.dataCurrent);
+                for (let iFL = 0, cFL = this.hooks.init.pre.length; iFL < cFL; iFL++) {
+                    this.hooks.init.pre[iFL](this.dataCurrent);
                 }
             }
             else {
-                const countFL = this.hooks.render.pre.length;
-                for (let indexFL = 0; indexFL < countFL; indexFL++) {
-                    this.hooks.render.pre[indexFL](this.dataCurrent, this.dataPrevious);
+                for (let iFL = 0, cFL = this.hooks.render.pre.length; iFL < cFL; iFL++) {
+                    this.hooks.render.pre[iFL](this.dataCurrent, this.dataPrevious);
                 }
             }
             const parser = new DOMParser();
@@ -225,17 +221,25 @@ class myopie {
             }
             const htmlTemplate = (tmpValue && tmpValue.body) ? tmpValue.body : document.createElement('body');
             this.DiffNode(htmlTemplate, htmlExisting);
+            const items = htmlExisting.querySelectorAll('*');
+            for (let iFL = 0, cFL = items.length; iFL < cFL; iFL++) {
+                for (let iSL = 0, cSL = (_a = items[iFL].attributes) === null || _a === void 0 ? void 0 : _a.length; iSL < cSL; iSL++) {
+                    if (items[iFL].attributes[iSL].name.startsWith('data-myopie-')) {
+                        items[iFL].removeAttribute(items[iFL].attributes[iSL].name);
+                        iSL--;
+                        cSL--;
+                    }
+                }
+            }
             if (!this.inited) {
-                const countFL = this.hooks.init.post.length;
-                for (let indexFL = 0; indexFL < countFL; indexFL++) {
-                    this.hooks.init.post[indexFL](this.dataCurrent);
+                for (let iFL = 0, cFL = this.hooks.init.post.length; iFL < cFL; iFL++) {
+                    this.hooks.init.post[iFL](this.dataCurrent);
                 }
                 this.inited = true;
             }
             else {
-                const countFL = this.hooks.render.post.length;
-                for (let indexFL = 0; indexFL < countFL; indexFL++) {
-                    this.hooks.render.post[indexFL](this.dataCurrent, this.dataPrevious);
+                for (let iFL = 0, cFL = this.hooks.render.post.length; iFL < cFL; iFL++) {
+                    this.hooks.render.post[iFL](this.dataCurrent, this.dataPrevious);
                 }
             }
             this.dataPrevious = null;
@@ -248,9 +252,9 @@ class myopie {
         if (null != path) {
             let components = path.split(/(?<!(?<!\\)\\)\//);
             const lenFL = components.length;
-            for (let indexFL = 0; ((indexFL < lenFL) && ('undefined' !== typeof returnValue)); indexFL++) {
+            for (let iFL = 0; ((iFL < lenFL) && ('undefined' !== typeof returnValue)); iFL++) {
                 if (Array.isArray(returnValue) || ('object' === typeof (returnValue))) {
-                    const elem = components[indexFL];
+                    const elem = components[iFL];
                     if ('undefined' !== typeof returnValue[elem]) {
                         returnValue = returnValue[elem];
                     }
@@ -272,14 +276,19 @@ class myopie {
         let tmpValue = this.dataCurrent;
         let components = path.split(/(?<!(?<!\\)\\)\//);
         const lenFL = components.length;
-        for (let indexFL = 0; indexFL < lenFL - 1; indexFL++) {
-            let tmpPath = components[indexFL];
+        for (let iFL = 0; iFL < lenFL - 1; iFL++) {
+            let tmpPath = components[iFL];
             if ('undefined' === typeof tmpValue[tmpPath]) {
                 tmpValue[tmpPath] = {};
             }
             tmpValue = tmpValue[tmpPath];
         }
-        tmpValue[components[lenFL - 1]] = value;
+        if ('undefined' !== typeof value) {
+            tmpValue[components[lenFL - 1]] = value;
+        }
+        else if ('undefined' !== typeof tmpValue[components[lenFL - 1]]) {
+            delete tmpValue[components[lenFL - 1]];
+        }
         if (render) {
             if (this.timeout > 0) {
                 if ('undefined' != typeof this.timer) {

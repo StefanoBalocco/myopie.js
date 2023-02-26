@@ -40,21 +40,20 @@ class myopie {
 		this.dataCurrent = myopie.DeepClone( initialData );
 		document.addEventListener( 'input', ( e ) => {
 			const event = <InputEvent> e;
-			const countFL = this.inputToPath.length;
 			let found = false;
-			for( let indexFL = 0; !found && indexFL < countFL; indexFL++ ) {
-				if( event && event.target && ( <Element> event.target ).matches( this.inputToPath[ indexFL ][ 0 ] ) ) {
+			for( let iFL = 0, cFL = this.inputToPath.length; !found && iFL < cFL; iFL++ ) {
+				if( event && event.target && ( <Element> event.target ).matches( this.inputToPath[ iFL ][ 0 ] ) ) {
 					switch( ( <HTMLInputElement> event.target ).type ) {
 						case 'checkbox': {
-							this.set( this.inputToPath[ indexFL ][ 1 ], ( <HTMLInputElement> event.target ).checked, false );
+							this.set( this.inputToPath[ iFL ][ 1 ], ( <HTMLInputElement> event.target ).checked, false );
 							break;
 						}
 						case 'radio': {
-							this.set( this.inputToPath[ indexFL ][ 1 ], ( <HTMLInputElement> event.target ).checked, false );
+							this.set( this.inputToPath[ iFL ][ 1 ], ( <HTMLInputElement> event.target ).checked, false );
 							break;
 						}
 						default: {
-							this.set( this.inputToPath[ indexFL ][ 1 ], ( <HTMLInputElement> event.target ).value, false );
+							this.set( this.inputToPath[ iFL ][ 1 ], ( <HTMLInputElement> event.target ).value, false );
 							// Text, number, password, date, email, ecc
 						}
 					}
@@ -137,25 +136,25 @@ class myopie {
 		);
 	}
 
-	private DiffNode( nodeTemplate: Element, nodeExisting: Element, ignore?: { content?: boolean, style?: boolean } ) {
+	private DiffNode( nodeTemplate: Element, nodeExisting: Element, ignore: { content: boolean, style: boolean } ) {
 		const nodesTemplate = nodeTemplate.childNodes;
 		const nodesExisting = nodeExisting.childNodes;
-		for( let indexFL = 0; indexFL < nodesTemplate.length; indexFL++ ) {
-			const tmpItem: Element = <Element> nodesTemplate[ indexFL ];
+		for( let iFL = 0; iFL < nodesTemplate.length; iFL++ ) {
+			const tmpItem: Element = <Element> nodesTemplate[ iFL ];
 			let currentItem: Element;
-			if( nodesExisting.length <= indexFL ) {
+			if( nodesExisting.length <= iFL ) {
 				currentItem = nodeExisting.appendChild<HTMLElement>( <HTMLElement> tmpItem.cloneNode( true ) );
 			} else {
-				currentItem = <Element> nodesExisting[ indexFL ];
+				currentItem = <Element> nodesExisting[ iFL ];
 				let skip: boolean = false;
 				if( !currentItem.isEqualNode( tmpItem ) ) {
 					if( !myopie.SimilarNode( tmpItem, currentItem ) ) {
-						let ahead: Element = <Element> Array.from( nodesExisting ).slice( indexFL + 1 ).find( ( branch ) => myopie.SimilarNode( tmpItem, <Element> branch ) );
+						let ahead: Element = <Element> Array.from( nodesExisting ).slice( iFL + 1 ).find( ( branch ) => myopie.SimilarNode( tmpItem, <Element> branch ) );
 						if( !ahead ) {
-							currentItem = nodeExisting.insertBefore<Element>( <Element> tmpItem.cloneNode( true ), ( ( indexFL < nodesExisting.length ) ? currentItem : null ) );
+							currentItem = nodeExisting.insertBefore<Element>( <Element> tmpItem, ( ( iFL < nodesExisting.length ) ? currentItem : null ) );
 							skip = true;
 						} else {
-							currentItem = nodeExisting.insertBefore<Element>( <Element> ahead.cloneNode( true ), ( ( indexFL < nodesExisting.length ) ? currentItem : null ) );
+							currentItem = nodeExisting.insertBefore<Element>( <Element> ahead, ( ( iFL < nodesExisting.length ) ? currentItem : null ) );
 						}
 					}
 					if( !skip ) {
@@ -165,9 +164,6 @@ class myopie {
 							currentItem.textContent = templateContent;
 						}
 						if( 1 === tmpItem.nodeType ) {
-							if( !ignore ) {
-								ignore = { content: false, style: false };
-							}
 							//attributes
 							const attributesTemplate = tmpItem.attributes;
 							const attributesExistings = currentItem.attributes;
@@ -183,11 +179,9 @@ class myopie {
 									if( null === attributesExistings.getNamedItem( realName ) ) {
 										currentItem.setAttribute( realName, value );
 									}
-								} else {
-									if( !name.startsWith( 'data-myopie-' ) ) {
-										if( ( ( !ignore?.style || 'style' != name ) && ( ( -1 === [ 'input', 'option', 'textarea' ].indexOf( currentItem.tagName ) ) || ( -1 === [ 'value', 'selected', 'checked' ].indexOf( name ) ) ) ) || ( null === attributesExistings.getNamedItem( name ) ) ) {
-											currentItem.setAttribute( name, value );
-										}
+								} else if( !name.startsWith( 'data-myopie-' ) ) {
+									if( ( ( !ignore?.style || 'style' != name ) && ( ( -1 === [ 'input', 'option', 'textarea' ].indexOf( currentItem.tagName ) ) || ( -1 === [ 'value', 'selected', 'checked' ].indexOf( name ) ) ) ) || ( null === attributesExistings.getNamedItem( name ) ) ) {
+										currentItem.setAttribute( name, value );
 									}
 								}
 							}
@@ -204,11 +198,11 @@ class myopie {
 								if( !tmpItem.childNodes.length && currentItem.childNodes.length ) {
 									currentItem.innerHTML = '';
 								} else if( !currentItem.childNodes.length && tmpItem.childNodes.length ) {
-									this.DiffNode( tmpItem, currentItem, ignore );
+									this.DiffNode( tmpItem, currentItem, myopie.DeepClone( ignore ) );
 								} else {
-									this.DiffNode( tmpItem, currentItem, ignore );
+									this.DiffNode( tmpItem, currentItem, myopie.DeepClone( ignore ) );
 								}
-								for( let indexSL = ( nodesExisting.length - nodesTemplate.length ); indexSL > 0; indexSL-- ) {
+								for( let iSL = ( nodesExisting.length - nodesTemplate.length ); iSL > 0; iSL-- ) {
 									nodesExisting[ nodesExisting.length - 1 ].remove();
 								}
 							}
@@ -240,14 +234,12 @@ class myopie {
 		const htmlExisting = document.querySelector<HTMLElement>( this.selector );
 		if( null != htmlExisting ) {
 			if( !this.inited ) {
-				const countFL = this.hooks.init.pre.length;
-				for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
-					this.hooks.init.pre[ indexFL ]( this.dataCurrent );
+				for( let iFL = 0, cFL = this.hooks.init.pre.length; iFL < cFL; iFL++ ) {
+					this.hooks.init.pre[ iFL ]( this.dataCurrent );
 				}
 			} else {
-				const countFL = this.hooks.render.pre.length;
-				for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
-					this.hooks.render.pre[ indexFL ]( this.dataCurrent, this.dataPrevious );
+				for( let iFL = 0, cFL = this.hooks.render.pre.length; iFL < cFL; iFL++ ) {
+					this.hooks.render.pre[ iFL ]( this.dataCurrent, this.dataPrevious );
 				}
 			}
 			const parser = new DOMParser();
@@ -256,17 +248,25 @@ class myopie {
 				Array.from( tmpValue.head.childNodes ).reverse().forEach( function( node ) { tmpValue.body.insertBefore( node, tmpValue.body.firstChild );} );
 			}
 			const htmlTemplate = ( tmpValue && tmpValue.body ) ? tmpValue.body : document.createElement( 'body' );
-			this.DiffNode( htmlTemplate, htmlExisting );
+			this.DiffNode( htmlTemplate, htmlExisting, { content: false, style: false } );
+			const items = htmlExisting.querySelectorAll( '*' );
+			for( let iFL = 0, cFL = items.length; iFL < cFL; iFL++ ) {
+				for( let iSL = 0, cSL = items[ iFL ].attributes?.length; iSL < cSL; iSL++ ) {
+					if( items[ iFL ].attributes[ iSL ].name.startsWith( 'data-myopie-' ) ) {
+						items[ iFL ].removeAttribute( items[ iFL ].attributes[ iSL ].name );
+						iSL--;
+						cSL--;
+					}
+				}
+			}
 			if( !this.inited ) {
-				const countFL = this.hooks.init.post.length;
-				for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
-					this.hooks.init.post[ indexFL ]( this.dataCurrent );
+				for( let iFL = 0, cFL = this.hooks.init.post.length; iFL < cFL; iFL++ ) {
+					this.hooks.init.post[ iFL ]( this.dataCurrent );
 				}
 				this.inited = true;
 			} else {
-				const countFL = this.hooks.render.post.length;
-				for( let indexFL = 0; indexFL < countFL; indexFL++ ) {
-					this.hooks.render.post[ indexFL ]( this.dataCurrent, this.dataPrevious );
+				for( let iFL = 0, cFL = this.hooks.render.post.length; iFL < cFL; iFL++ ) {
+					this.hooks.render.post[ iFL ]( this.dataCurrent, this.dataPrevious );
 				}
 			}
 			this.dataPrevious = null;
@@ -280,9 +280,9 @@ class myopie {
 		if( null != path ) {
 			let components = path.split( /(?<!(?<!\\)\\)\// );
 			const lenFL = components.length;
-			for( let indexFL = 0; ( ( indexFL < lenFL ) && ( 'undefined' !== typeof returnValue ) ); indexFL++ ) {
+			for( let iFL = 0; ( ( iFL < lenFL ) && ( 'undefined' !== typeof returnValue ) ); iFL++ ) {
 				if( Array.isArray( returnValue ) || ( 'object' === typeof ( returnValue ) ) ) {
-					const elem = components[ indexFL ];
+					const elem = components[ iFL ];
 					if( 'undefined' !== typeof returnValue[ elem ] ) {
 						returnValue = returnValue[ elem ];
 					} else {
@@ -303,14 +303,18 @@ class myopie {
 		let tmpValue = this.dataCurrent;
 		let components = path.split( /(?<!(?<!\\)\\)\// );
 		const lenFL = components.length;
-		for( let indexFL = 0; indexFL < lenFL - 1; indexFL++ ) {
-			let tmpPath = components[ indexFL ];
+		for( let iFL = 0; iFL < lenFL - 1; iFL++ ) {
+			let tmpPath = components[ iFL ];
 			if( 'undefined' === typeof tmpValue[ tmpPath ] ) {
 				tmpValue[ tmpPath ] = {};
 			}
 			tmpValue = tmpValue[ tmpPath ];
 		}
-		tmpValue[ components[ lenFL - 1 ] ] = value;
+		if( 'undefined' !== typeof value ) {
+			tmpValue[ components[ lenFL - 1 ] ] = value;
+		} else if( 'undefined' !== typeof tmpValue[ components[ lenFL - 1 ] ] ) {
+			delete tmpValue[ components[ lenFL - 1 ] ];
+		}
 		if( render ) {
 			if( this.timeout > 0 ) {
 				if( 'undefined' != typeof this.timer ) {
