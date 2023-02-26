@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/StefanoBalocco/myopie.js.git"
   },
-  "version": "0.2.5",
+  "version": "0.2.6",
   "keywords": [
     "MVC"
   ],
@@ -21,7 +21,7 @@
     "build": "node_modules/typescript/bin/tsc && node_modules/terser/bin/terser myopie.js -o myopie.min.js -m -c --mangle-props regex=/^_/"
   },
   "devDependencies": {
-    "terser": "^5.15.1",
-    "typescript": "^4.8.4"
+    "terser": "~5.16.5",
+    "typescript": "~4.9.5"
   }
 }

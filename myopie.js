@@ -1,5 +1,8 @@
 "use strict";
 class myopie {
+    static Create(selector, template, initialData = {}, inputToPath = [], timeout = 1000) {
+        return new myopie(selector, template, initialData, inputToPath, timeout);
+    }
     constructor(selector, template, initialData = {}, inputToPath = [], timeout) {
         this.timeout = 0;
         this.timer = undefined;
@@ -33,9 +36,6 @@ class myopie {
                 }
             }
         });
-    }
-    static Create(selector, template, initialData = {}, inputToPath = [], timeout = 1000) {
-        return new myopie(selector, template, initialData, inputToPath, timeout);
     }
     static DeepClone(obj) {
         let returnValue = null;
