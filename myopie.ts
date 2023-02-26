@@ -198,9 +198,9 @@ class myopie {
 								if( !tmpItem.childNodes.length && currentItem.childNodes.length ) {
 									currentItem.innerHTML = '';
 								} else if( !currentItem.childNodes.length && tmpItem.childNodes.length ) {
-									this.DiffNode( tmpItem, currentItem, myopie.DeepClone( ignore ) );
+									this.DiffNode( tmpItem, currentItem, Object.assign( {}, ignore ) );
 								} else {
-									this.DiffNode( tmpItem, currentItem, myopie.DeepClone( ignore ) );
+									this.DiffNode( tmpItem, currentItem, Object.assign( {}, ignore ) );
 								}
 								for( let iSL = ( nodesExisting.length - nodesTemplate.length ); iSL > 0; iSL-- ) {
 									nodesExisting[ nodesExisting.length - 1 ].remove();
