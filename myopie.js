@@ -136,9 +136,6 @@ class myopie {
                             currentItem.textContent = templateContent;
                         }
                         if (1 === tmpItem.nodeType) {
-                            if (!ignore) {
-                                ignore = { content: false, style: false };
-                            }
                             const attributesTemplate = tmpItem.attributes;
                             const attributesExistings = currentItem.attributes;
                             if ('true' === ((_a = attributesTemplate.getNamedItem('data-myopie-ignore-content')) === null || _a === void 0 ? void 0 : _a.value)) {
@@ -172,10 +169,10 @@ class myopie {
                                     currentItem.innerHTML = '';
                                 }
                                 else if (!currentItem.childNodes.length && tmpItem.childNodes.length) {
-                                    this.DiffNode(tmpItem, currentItem, myopie.DeepClone(ignore));
+                                    this.DiffNode(tmpItem, currentItem, Object.assign({}, ignore));
                                 }
                                 else {
-                                    this.DiffNode(tmpItem, currentItem, myopie.DeepClone(ignore));
+                                    this.DiffNode(tmpItem, currentItem, Object.assign({}, ignore));
                                 }
                                 for (let iSL = (nodesExisting.length - nodesTemplate.length); iSL > 0; iSL--) {
                                     nodesExisting[nodesExisting.length - 1].remove();
@@ -220,7 +217,7 @@ class myopie {
                 Array.from(tmpValue.head.childNodes).reverse().forEach(function (node) { tmpValue.body.insertBefore(node, tmpValue.body.firstChild); });
             }
             const htmlTemplate = (tmpValue && tmpValue.body) ? tmpValue.body : document.createElement('body');
-            this.DiffNode(htmlTemplate, htmlExisting);
+            this.DiffNode(htmlTemplate, htmlExisting, { content: false, style: false });
             const items = htmlExisting.querySelectorAll('*');
             for (let iFL = 0, cFL = items.length; iFL < cFL; iFL++) {
                 for (let iSL = 0, cSL = (_a = items[iFL].attributes) === null || _a === void 0 ? void 0 : _a.length; iSL < cSL; iSL++) {
