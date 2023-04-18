@@ -96,7 +96,7 @@ class myopie {
         return ((node1.nodeType === node2.nodeType) &&
             (node1.tagName === node2.tagName) &&
             (node1.id === node2.id) &&
-            (node1.id ||
+            (!!node1.id ||
                 (node1.src && (node1.src === node2.src)) ||
                 (node1.href && (node1.href === node2.href)) ||
                 (node1.className === node2.className) ||
@@ -109,11 +109,21 @@ class myopie {
         var _a, _b;
         const nodesTemplate = nodeTemplate.childNodes;
         const nodesExisting = nodeExisting.childNodes;
-        for (let iFL = 0; iFL < nodesTemplate.length; iFL++) {
+        const cFL = nodesTemplate.length;
+        for (let iFL = 0; iFL < cFL; iFL++) {
             const tmpItem = nodesTemplate[iFL];
             let currentItem;
             if (nodesExisting.length <= iFL) {
-                currentItem = nodeExisting.appendChild(tmpItem.cloneNode(true));
+                switch (tmpItem.nodeType) {
+                    case 1: {
+                        nodeExisting.append(tmpItem.cloneNode(true));
+                        break;
+                    }
+                    case 3: {
+                        nodeExisting.append(tmpItem.nodeValue);
+                        break;
+                    }
+                }
             }
             else {
                 currentItem = nodesExisting[iFL];
@@ -122,7 +132,7 @@ class myopie {
                     if (!myopie.SimilarNode(tmpItem, currentItem)) {
                         let ahead = Array.from(nodesExisting).slice(iFL + 1).find((branch) => myopie.SimilarNode(tmpItem, branch));
                         if (!ahead) {
-                            currentItem = nodeExisting.insertBefore(tmpItem, ((iFL < nodesExisting.length) ? currentItem : null));
+                            currentItem = nodeExisting.insertBefore(tmpItem.cloneNode(true), ((iFL < nodesExisting.length) ? currentItem : null));
                             skip = true;
                         }
                         else {
@@ -174,14 +184,14 @@ class myopie {
                                 else {
                                     this.DiffNode(tmpItem, currentItem, Object.assign({}, ignore));
                                 }
-                                for (let iSL = (nodesExisting.length - nodesTemplate.length); iSL > 0; iSL--) {
-                                    nodesExisting[nodesExisting.length - 1].remove();
-                                }
                             }
                         }
                     }
                 }
             }
+        }
+        for (let iFL = (nodesExisting.length - nodesTemplate.length); iFL > 0; iFL--) {
+            nodesExisting[nodesExisting.length - 1].remove();
         }
     }
     HooksInitAddPre(hookFunction) {

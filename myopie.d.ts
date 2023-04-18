@@ -15,7 +15,7 @@ declare class myopie {
     static Create(selector: string, template: (data: any) => string, initialData?: any, inputToPath?: string[][], timeout?: number): myopie;
     private constructor();
     static DeepClone(obj: any): any;
-    static SimilarNode(node1: Element, node2: Element): string | boolean;
+    static SimilarNode(node1: Element, node2: Element): boolean;
     private DiffNode;
     HooksInitAddPre(hookFunction: ((dataCurrent: any) => void)): void;
     HooksInitAddPost(hookFunction: ((dataCurrent: any) => void)): void;

@@ -122,7 +122,7 @@ class myopie {
 			( node1.tagName === node2.tagName ) &&
 			( node1.id === node2.id ) &&
 			(
-				node1.id ||
+				!!node1.id ||
 				( ( <HTMLImageElement> node1 ).src && ( ( <HTMLImageElement> node1 ).src === ( <HTMLImageElement> node2 ).src ) ) ||
 				( ( <HTMLLinkElement> node1 ).href && ( ( <HTMLLinkElement> node1 ).href === ( <HTMLLinkElement> node2 ).href ) ) ||
 				( node1.className === node2.className ) ||
@@ -139,11 +139,21 @@ class myopie {
 	private DiffNode( nodeTemplate: Element, nodeExisting: Element, ignore: { content: boolean, style: boolean } ) {
 		const nodesTemplate = nodeTemplate.childNodes;
 		const nodesExisting = nodeExisting.childNodes;
-		for( let iFL = 0; iFL < nodesTemplate.length; iFL++ ) {
+		const cFL = nodesTemplate.length;
+		for( let iFL = 0; iFL < cFL; iFL++ ) {
 			const tmpItem: Element = <Element> nodesTemplate[ iFL ];
 			let currentItem: Element;
 			if( nodesExisting.length <= iFL ) {
-				currentItem = nodeExisting.appendChild<HTMLElement>( <HTMLElement> tmpItem.cloneNode( true ) );
+				switch( tmpItem.nodeType ) {
+					case 1: {
+						nodeExisting.append( tmpItem.cloneNode( true ) );
+						break;
+					}
+					case 3: {
+						nodeExisting.append( <string> tmpItem.nodeValue );
+						break;
+					}
+				}
 			} else {
 				currentItem = <Element> nodesExisting[ iFL ];
 				let skip: boolean = false;
@@ -151,7 +161,7 @@ class myopie {
 					if( !myopie.SimilarNode( tmpItem, currentItem ) ) {
 						let ahead: Element = <Element> Array.from( nodesExisting ).slice( iFL + 1 ).find( ( branch ) => myopie.SimilarNode( tmpItem, <Element> branch ) );
 						if( !ahead ) {
-							currentItem = nodeExisting.insertBefore<Element>( <Element> tmpItem, ( ( iFL < nodesExisting.length ) ? currentItem : null ) );
+							currentItem = nodeExisting.insertBefore<Element>( <Element> tmpItem.cloneNode( true ), ( ( iFL < nodesExisting.length ) ? currentItem : null ) );
 							skip = true;
 						} else {
 							currentItem = nodeExisting.insertBefore<Element>( <Element> ahead, ( ( iFL < nodesExisting.length ) ? currentItem : null ) );
@@ -202,14 +212,14 @@ class myopie {
 								} else {
 									this.DiffNode( tmpItem, currentItem, Object.assign( {}, ignore ) );
 								}
-								for( let iSL = ( nodesExisting.length - nodesTemplate.length ); iSL > 0; iSL-- ) {
-									nodesExisting[ nodesExisting.length - 1 ].remove();
-								}
 							}
 						}
 					}
 				}
 			}
+		}
+		for( let iFL = ( nodesExisting.length - nodesTemplate.length ); iFL > 0; iFL-- ) {
+			nodesExisting[ nodesExisting.length - 1 ].remove();
 		}
 	}
 
