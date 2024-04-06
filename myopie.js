@@ -106,7 +106,6 @@ class myopie {
                     !node1.className && !node2.className)));
     }
     DiffNode(nodeTemplate, nodeExisting, ignore) {
-        var _a, _b;
         const nodesTemplate = nodeTemplate.childNodes;
         const nodesExisting = nodeExisting.childNodes;
         const cFL = nodesTemplate.length;
@@ -148,10 +147,10 @@ class myopie {
                         if (1 === tmpItem.nodeType) {
                             const attributesTemplate = tmpItem.attributes;
                             const attributesExistings = currentItem.attributes;
-                            if ('true' === ((_a = attributesTemplate.getNamedItem('data-myopie-ignore-content')) === null || _a === void 0 ? void 0 : _a.value)) {
+                            if ('true' === attributesTemplate.getNamedItem('data-myopie-ignore-content')?.value) {
                                 ignore.content = true;
                             }
-                            if ('true' === ((_b = attributesTemplate.getNamedItem('data-myopie-ignore-style')) === null || _b === void 0 ? void 0 : _b.value)) {
+                            if ('true' === attributesTemplate.getNamedItem('data-myopie-ignore-style')?.value) {
                                 ignore.style = true;
                             }
                             for (let { name, value } of attributesTemplate) {
@@ -162,14 +161,14 @@ class myopie {
                                     }
                                 }
                                 else if (!name.startsWith('data-myopie-')) {
-                                    if (((!(ignore === null || ignore === void 0 ? void 0 : ignore.style) || 'style' != name) && ((-1 === ['input', 'option', 'textarea'].indexOf(currentItem.tagName)) || (-1 === ['value', 'selected', 'checked'].indexOf(name)))) || (null === attributesExistings.getNamedItem(name))) {
+                                    if (((!ignore?.style || 'style' != name) && ((-1 === ['input', 'option', 'textarea'].indexOf(currentItem.tagName)) || (-1 === ['value', 'selected', 'checked'].indexOf(name)))) || (null === attributesExistings.getNamedItem(name))) {
                                         currentItem.setAttribute(name, value);
                                     }
                                 }
                             }
                             for (let { name } of attributesExistings) {
                                 if (null === attributesTemplate.getNamedItem(name)) {
-                                    if (!(ignore === null || ignore === void 0 ? void 0 : ignore.style) || (name !== 'style')) {
+                                    if (!ignore?.style || (name !== 'style')) {
                                         currentItem.removeAttribute(name);
                                     }
                                 }
@@ -207,7 +206,6 @@ class myopie {
         this.hooks.render.post.push(hookFunction);
     }
     render() {
-        var _a;
         this.timer = undefined;
         const htmlExisting = document.querySelector(this.selector);
         if (null != htmlExisting) {
@@ -230,7 +228,7 @@ class myopie {
             this.DiffNode(htmlTemplate, htmlExisting, { content: false, style: false });
             const items = htmlExisting.querySelectorAll('*');
             for (let iFL = 0, cFL = items.length; iFL < cFL; iFL++) {
-                for (let iSL = 0, cSL = (_a = items[iFL].attributes) === null || _a === void 0 ? void 0 : _a.length; iSL < cSL; iSL++) {
+                for (let iSL = 0, cSL = items[iFL].attributes?.length; iSL < cSL; iSL++) {
                     if (items[iFL].attributes[iSL].name.startsWith('data-myopie-')) {
                         items[iFL].removeAttribute(items[iFL].attributes[iSL].name);
                         iSL--;
