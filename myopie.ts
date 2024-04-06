@@ -2,13 +2,7 @@
  * Partially rip from https://github.com/cferdinandi/reef/
  */
 
-interface NodeWithChilds {
-	childNodes: NodeListOf<ChildNode>,
-
-	appendChild( node: ChildNode ): void;
-}
-
-class myopie {
+export class myopie {
 	private readonly selector: string;
 	private readonly template: ( data: any ) => string;
 	private readonly timeout: number = 0;

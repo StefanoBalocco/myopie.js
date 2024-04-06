@@ -1,5 +1,4 @@
-"use strict";
-class myopie {
+export class myopie {
     static Create(selector, template, initialData = {}, inputToPath = [], timeout = 1000) {
         return new myopie(selector, template, initialData, inputToPath, timeout);
     }

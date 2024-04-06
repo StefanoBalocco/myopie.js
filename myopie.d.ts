@@ -1,8 +1,4 @@
-interface NodeWithChilds {
-    childNodes: NodeListOf<ChildNode>;
-    appendChild(node: ChildNode): void;
-}
-declare class myopie {
+export declare class myopie {
     private readonly selector;
     private readonly template;
     private readonly timeout;
