@@ -1,13 +1,13 @@
-export declare class myopie {
-    private readonly selector;
-    private readonly template;
-    private readonly timeout;
-    private readonly inputToPath;
-    private timer;
-    private dataCurrent;
-    private dataPrevious;
-    private inited;
-    private hooks;
+export default class myopie {
+    private readonly _selector;
+    private readonly _template;
+    private readonly _timeout;
+    private readonly _inputToPath;
+    private _timer;
+    private _dataCurrent;
+    private _dataPrevious;
+    private _inited;
+    private _hooks;
     static Create(selector: string, template: (data: any) => string, initialData?: any, inputToPath?: string[][], timeout?: number): myopie;
     private constructor();
     static DeepClone(obj: any): any;

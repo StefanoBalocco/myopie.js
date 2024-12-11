@@ -3,11 +3,12 @@
   "description": "View in MVC, but without foresight",
   "main": "myopie.min.js",
   "types": "myopie.d.ts",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/StefanoBalocco/myopie.js.git"
   },
-  "version": "0.2.8",
+  "version": "0.3.0",
   "keywords": [
     "MVC"
   ],

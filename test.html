@@ -5,8 +5,9 @@
 <body>
 	<div id="testcontainer"></div>
 	<style>.gutter { width:100px } </style>
-	<script type="text/javascript" src="myopie.js"></script>
-	<script type="text/javascript">
+	<script type="module">
+import myopie from './myopie.js';
+
 function render( data ) {
 	return "<div><input type='text' name='testText' value='" + data.content.string + "'></div>";
 }
