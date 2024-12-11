@@ -8,10 +8,7 @@ export default class myopie {
     _dataPrevious = null;
     _inited = false;
     _hooks = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
-    static Create(selector, template, initialData = {}, inputToPath = [], timeout = 1000) {
-        return new myopie(selector, template, initialData, inputToPath, timeout);
-    }
-    constructor(selector, template, initialData = {}, inputToPath = [], timeout) {
+    constructor(selector, template, initialData = {}, inputToPath = [], timeout = 1000) {
         this._selector = selector;
         this._template = template;
         this._timeout = timeout;

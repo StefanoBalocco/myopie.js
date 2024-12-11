@@ -22,11 +22,7 @@ export default class myopie {
 		}
 	} = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
 
-	public static Create( selector: string, template: ( data: any ) => string, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 1000 ): myopie {
-		return new myopie( selector, template, initialData, inputToPath, timeout );
-	}
-
-	private constructor( selector: string, template: ( data: any ) => string, initialData: any = {}, inputToPath: string[][] = [], timeout: number ) {
+	public constructor( selector: string, template: ( data: any ) => string, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 1000 ) {
 		this._selector = selector;
 		this._template = template;
 		this._timeout = timeout;
