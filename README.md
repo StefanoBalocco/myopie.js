@@ -1,15 +1,6 @@
+# Myopie Documentation
 
-
-
-# Myopie
-
-> French for Myopia
-> 
-> Noun
-> - the quality of being short-sighted
-> - lack of foresight.
-
-**Myopie** is a lightweight, skinned, and simplified alternative to Vue.js, inspired by (and with some code ripped from) [ReefJS](https://github.com/cferdinandi/reef)).
+**Myopie** is a lightweight, skinned, and simplified alternative to Vue.js, inspired by (and borrowing some code from) ReefJS. Its name derives from the French word "myopie," meaning **myopia** or **short-sightedness**, reflecting its focus on simplicity and a streamlined feature set for smaller-scale applications.
 
 ---
 
@@ -141,14 +132,37 @@ Manually triggers a re-render of the DOM.
 
 ### Lifecycle Hooks
 
-Hooks allow you to inject custom behavior before and after initialization and rendering.
+Myopie provides several lifecycle hooks that allow you to inject custom behavior at specific points during the component's initialization and rendering process. These hooks are executed with specific parameters based on the type of hook.
 
-#### Adding Hooks
+#### Hook Categories
 
-```javascript
-myopie.HooksInitAddPre((state) => console.log('Before initialization', state));
-myopie.HooksRenderAddPost((state) => console.log('After rendering', state));
-```
+1. **Initialization Hooks**
+   - **`HooksInitAddPre`**: Executed before the component is initialized. Receives the current state data as a parameter.
+     ```javascript
+     myopie.HooksInitAddPre((dataCurrent) => {
+       console.log('This runs before initialization.', dataCurrent);
+     });
+     ```
+   - **`HooksInitAddPost`**: Executed after the component is initialized. Receives the current state data as a parameter.
+     ```javascript
+     myopie.HooksInitAddPost((dataCurrent) => {
+       console.log('This runs after initialization.', dataCurrent);
+     });
+     ```
+
+2. **Rendering Hooks**
+   - **`HooksRenderAddPre`**: Executed before the component renders. Receives the current and previous state data arrays as parameters.
+     ```javascript
+     myopie.HooksRenderAddPre((dataCurrent, dataPrevious) => {
+       console.log('This runs before rendering.', dataCurrent, dataPrevious);
+     });
+     ```
+   - **`HooksRenderAddPost`**: Executed after the component renders. Receives the current and previous state data arrays as parameters.
+     ```javascript
+     myopie.HooksRenderAddPost((dataCurrent, dataPrevious) => {
+       console.log('This runs after rendering.', dataCurrent, dataPrevious);
+     });
+     ```
 
 ---
 
