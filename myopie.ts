@@ -22,7 +22,7 @@ export default class myopie {
 		}
 	} = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
 
-	public constructor( selector: string, template: ( data: any ) => string, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 1000 ) {
+	public constructor( selector: string, template: ( data: any ) => string, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 100, renderOnInput : boolean = true ) {
 		this._selector = selector;
 		this._template = template;
 		this._timeout = timeout;
@@ -35,15 +35,15 @@ export default class myopie {
 				if( event && event.target && ( <Element> event.target ).matches( this._inputToPath[ iFL ][ 0 ] ) ) {
 					switch( ( <HTMLInputElement> event.target ).type ) {
 						case 'checkbox': {
-							this.set( this._inputToPath[ iFL ][ 1 ], ( <HTMLInputElement> event.target ).checked, false );
+							this.set( this._inputToPath[ iFL ][ 1 ], ( <HTMLInputElement> event.target ).checked, renderOnInput );
 							break;
 						}
 						case 'radio': {
-							this.set( this._inputToPath[ iFL ][ 1 ], ( <HTMLInputElement> event.target ).checked, false );
+							this.set( this._inputToPath[ iFL ][ 1 ], ( <HTMLInputElement> event.target ).checked, renderOnInput );
 							break;
 						}
 						default: {
-							this.set( this._inputToPath[ iFL ][ 1 ], ( <HTMLInputElement> event.target ).value, false );
+							this.set( this._inputToPath[ iFL ][ 1 ], ( <HTMLInputElement> event.target ).value, renderOnInput );
 							// Text, number, password, date, email, ecc
 						}
 					}
