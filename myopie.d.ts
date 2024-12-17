@@ -8,7 +8,7 @@ export default class myopie {
     private _dataPrevious;
     private _inited;
     private _hooks;
-    constructor(selector: string, template: (data: any) => string, initialData?: any, inputToPath?: string[][], timeout?: number);
+    constructor(selector: string, template: (data: any) => string, initialData?: any, inputToPath?: string[][], timeout?: number, renderOnInput?: boolean);
     static DeepClone(obj: any): any;
     static SimilarNode(node1: Element, node2: Element): boolean;
     private DiffNode;

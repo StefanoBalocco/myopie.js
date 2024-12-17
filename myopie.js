@@ -8,7 +8,7 @@ export default class myopie {
     _dataPrevious = null;
     _inited = false;
     _hooks = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
-    constructor(selector, template, initialData = {}, inputToPath = [], timeout = 1000) {
+    constructor(selector, template, initialData = {}, inputToPath = [], timeout = 100, renderOnInput = true) {
         this._selector = selector;
         this._template = template;
         this._timeout = timeout;
@@ -21,15 +21,15 @@ export default class myopie {
                 if (event && event.target && event.target.matches(this._inputToPath[iFL][0])) {
                     switch (event.target.type) {
                         case 'checkbox': {
-                            this.set(this._inputToPath[iFL][1], event.target.checked, false);
+                            this.set(this._inputToPath[iFL][1], event.target.checked, renderOnInput);
                             break;
                         }
                         case 'radio': {
-                            this.set(this._inputToPath[iFL][1], event.target.checked, false);
+                            this.set(this._inputToPath[iFL][1], event.target.checked, renderOnInput);
                             break;
                         }
                         default: {
-                            this.set(this._inputToPath[iFL][1], event.target.value, false);
+                            this.set(this._inputToPath[iFL][1], event.target.value, renderOnInput);
                         }
                     }
                 }
