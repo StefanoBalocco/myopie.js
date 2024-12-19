@@ -1,6 +1,11 @@
-# Myopie Documentation
+# Myopie
+> French for Myopia
+> 
+> Noun
+> - the quality of being short-sighted
+> - lack of foresight.
 
-**Myopie** is a lightweight, skinned, and simplified alternative to Vue.js, inspired by (and borrowing some code from) ReefJS. Its name derives from the French word "myopie," meaning **myopia** or **short-sightedness**, reflecting its focus on simplicity and a streamlined feature set for smaller-scale applications.
+I thought would be a perfect name for a skinned, simplified, alternative to Vue (with some code ripped from [ReefJS](https://github.com/cferdinandi/reef).
 
 ---
 
