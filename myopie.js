@@ -94,11 +94,11 @@ export default class myopie {
             const tmpItem = nodesTemplate[iL1];
             if (nodesExisting.length <= iL1) {
                 switch (tmpItem.nodeType) {
-                    case 1: {
+                    case Node.ELEMENT_NODE: {
                         nodeExisting.append(tmpItem.cloneNode(true));
                         break;
                     }
-                    case 3: {
+                    case Node.TEXT_NODE: {
                         nodeExisting.append(tmpItem.nodeValue);
                         break;
                     }
@@ -106,25 +106,19 @@ export default class myopie {
             }
             else {
                 let currentItem = nodesExisting[iL1];
-                let skip = false;
                 if (!currentItem.isEqualNode(tmpItem)) {
-                    if (!myopie._SimilarNode(tmpItem, currentItem)) {
-                        let ahead = Array.from(nodesExisting).slice(iL1 + 1).find((branch) => myopie._SimilarNode(tmpItem, branch));
-                        if (!ahead) {
-                            currentItem = nodeExisting.insertBefore(tmpItem.cloneNode(true), ((iL1 < nodesExisting.length) ? currentItem : null));
-                            skip = true;
-                        }
-                        else {
-                            currentItem = nodeExisting.insertBefore(ahead, ((iL1 < nodesExisting.length) ? currentItem : null));
-                        }
+                    const similar = myopie._SimilarNode(tmpItem, currentItem);
+                    const ahead = (similar ? undefined : Array.from(nodesExisting).slice(iL1 + 1).find((branch) => myopie._SimilarNode(tmpItem, branch)));
+                    if (!similar) {
+                        currentItem = nodeExisting.insertBefore((ahead ?? tmpItem.cloneNode(true)), ((iL1 < nodesExisting.length) ? currentItem : null));
                     }
-                    if (!skip) {
-                        const templateContent = (tmpItem.childNodes && tmpItem.childNodes.length) ? null : tmpItem.textContent;
-                        const existingContent = (currentItem.childNodes && currentItem.childNodes.length) ? null : currentItem.textContent;
+                    if (similar || ahead) {
+                        const templateContent = (tmpItem.childNodes?.length) ? null : tmpItem.textContent;
+                        const existingContent = (currentItem.childNodes?.length) ? null : currentItem.textContent;
                         if (templateContent != existingContent) {
                             currentItem.textContent = templateContent;
                         }
-                        if (1 === tmpItem.nodeType) {
+                        if (Node.ELEMENT_NODE === tmpItem.nodeType) {
                             const attributesTemplate = tmpItem.attributes;
                             const attributesExistings = currentItem.attributes;
                             if ('true' === attributesTemplate.getNamedItem('data-myopie-ignore-content')?.value) {
@@ -159,11 +153,8 @@ export default class myopie {
                                 if (!tmpItem.childNodes.length && currentItem.childNodes.length) {
                                     currentItem.innerHTML = '';
                                 }
-                                else if (!currentItem.childNodes.length && tmpItem.childNodes.length) {
-                                    myopie._DiffNode(tmpItem, currentItem, Object.assign({}, ignore));
-                                }
                                 else {
-                                    myopie._DiffNode(tmpItem, currentItem, Object.assign({}, ignore));
+                                    myopie._DiffNode(tmpItem, currentItem, { ...ignore });
                                 }
                             }
                         }

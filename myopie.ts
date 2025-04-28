@@ -128,35 +128,30 @@ export default class myopie {
 			const tmpItem: Element = <Element> nodesTemplate[ iL1 ];
 			if( nodesExisting.length <= iL1 ) {
 				switch( tmpItem.nodeType ) {
-					case 1: {
+					case Node.ELEMENT_NODE: {
 						nodeExisting.append( tmpItem.cloneNode( true ) );
 						break;
 					}
-					case 3: {
+					case Node.TEXT_NODE: {
 						nodeExisting.append( <string> tmpItem.nodeValue );
 						break;
 					}
 				}
 			} else {
 				let currentItem: Element = <Element> nodesExisting[ iL1 ];
-				let skip: boolean = false;
 				if( !currentItem.isEqualNode( tmpItem ) ) {
-					if( !myopie._SimilarNode( tmpItem, currentItem ) ) {
-						let ahead: Element = <Element> Array.from( nodesExisting ).slice( iL1 + 1 ).find( ( branch ) => myopie._SimilarNode( tmpItem, <Element> branch ) );
-						if( !ahead ) {
-							currentItem = nodeExisting.insertBefore<Element>( <Element> tmpItem.cloneNode( true ), ( ( iL1 < nodesExisting.length ) ? currentItem : null ) );
-							skip = true;
-						} else {
-							currentItem = nodeExisting.insertBefore<Element>( <Element> ahead, ( ( iL1 < nodesExisting.length ) ? currentItem : null ) );
-						}
+					const similar: boolean = myopie._SimilarNode( tmpItem, currentItem );
+					const ahead: Undefinedable<Element> = ( similar ? undefined : <Element> Array.from( nodesExisting ).slice( iL1 + 1 ).find( ( branch: ChildNode ): boolean => myopie._SimilarNode( tmpItem, <Element> branch ) ) );
+					if( !similar ) {
+						currentItem = nodeExisting.insertBefore<Element>( <Element> ( ahead ?? tmpItem.cloneNode( true ) ), ( ( iL1 < nodesExisting.length ) ? currentItem : null ) );
 					}
-					if( !skip ) {
-						const templateContent: Nullable<string> = ( tmpItem.childNodes && tmpItem.childNodes.length ) ? null : tmpItem.textContent;
-						const existingContent: Nullable<string> = ( currentItem.childNodes && currentItem.childNodes.length ) ? null : currentItem.textContent;
+					if( similar || ahead ) {
+						const templateContent: Nullable<string> = ( tmpItem.childNodes.length ) ? null : tmpItem.textContent;
+						const existingContent: Nullable<string> = ( currentItem.childNodes.length ) ? null : currentItem.textContent;
 						if( templateContent != existingContent ) {
 							currentItem.textContent = templateContent;
 						}
-						if( 1 === tmpItem.nodeType ) {
+						if( Node.ELEMENT_NODE === tmpItem.nodeType ) {
 							//attributes
 							const attributesTemplate: NamedNodeMap = tmpItem.attributes;
 							const attributesExistings: NamedNodeMap = currentItem.attributes;
@@ -191,10 +186,8 @@ export default class myopie {
 							if( !ignore.content ) {
 								if( !tmpItem.childNodes.length && currentItem.childNodes.length ) {
 									currentItem.innerHTML = '';
-								} else if( !currentItem.childNodes.length && tmpItem.childNodes.length ) {
-									myopie._DiffNode( tmpItem, currentItem, Object.assign( {}, ignore ) );
 								} else {
-									myopie._DiffNode( tmpItem, currentItem, Object.assign( {}, ignore ) );
+									myopie._DiffNode( tmpItem, currentItem, { ...ignore } );
 								}
 							}
 						}
