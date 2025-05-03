@@ -12,10 +12,10 @@ I thought would be a perfect name for a skinned, simplified, alternative to Vue 
 ## Features
 
 - **Component-based rendering**: Build dynamic UIs with a minimalistic approach.
-  - **Data binding**: Two-way binding for form inputs and data.
-  - **Efficient DOM diffing**: Only updates changed parts of the DOM.
-  - **Lifecycle hooks**: Customize initialization and rendering.
-  - **Lightweight**: Minimal overhead for small to medium-sized projects.
+- **Data binding**: Two-way binding for form inputs and data.
+- **Efficient DOM diffing**: Only updates changed parts of the DOM.
+- **Lifecycle hooks**: Customize initialization and rendering.
+- **Lightweight**: Minimal overhead for small to medium-sized projects.
 
 ---
 
