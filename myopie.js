@@ -1,16 +1,21 @@
 'use strict';
-export default class myopie {
+export default class Myopie {
+    static _nodeTypeElement = Node.ELEMENT_NODE;
+    static _nodeTypeText = Node.TEXT_NODE;
     static _objectToString = Object.prototype.toString;
+    _templateElement;
     _selector;
     _template;
     _timeout = 0;
     _inputToPath;
     _document;
     _onInput;
+    _lastRendering;
     _timer = undefined;
     _dataCurrent = {};
     _dataPrevious = null;
     _inited = false;
+    _handlersPermanent = new Map();
     _hooks = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
     constructor(document, selector, template, initialData = {}, inputToPath = [], timeout = 100, renderOnInput = true) {
         this._document = document;
@@ -18,43 +23,46 @@ export default class myopie {
         this._template = template;
         this._timeout = timeout;
         this._inputToPath = inputToPath;
-        this._dataCurrent = myopie._DeepClone(initialData);
+        this._dataCurrent = Myopie._deepClone(initialData);
+        this._templateElement = document.createElement('template');
+        const extractors = {
+            input: (element) => {
+                const input = element;
+                return (input.type === 'checkbox' || input.type === 'radio') ? input.checked : input.value;
+            },
+            textarea: (element) => element.value,
+            select: (element) => element.value
+        };
         this._onInput = (event) => {
             const target = event?.target;
-            if (target instanceof HTMLInputElement) {
-                this._inputToPath.some(([selector, path]) => {
-                    let returnValue = false;
-                    if (target.matches(selector)) {
-                        switch (target.type) {
-                            case 'checkbox':
-                            case 'radio': {
-                                this.set(path, target.checked, renderOnInput);
-                                break;
-                            }
-                            default: {
-                                this.set(path, target.value, renderOnInput);
-                                break;
-                            }
+            if (target instanceof HTMLElement) {
+                const tagName = target.tagName.toLowerCase();
+                const extractor = extractors[tagName];
+                if (!!extractor) {
+                    this._inputToPath.some(([selector, path]) => {
+                        let returnValue = false;
+                        if (target.matches(selector)) {
+                            returnValue = true;
+                            this.set(path, extractor(target), renderOnInput);
                         }
-                        returnValue = true;
-                    }
-                    return returnValue;
-                });
+                        return returnValue;
+                    });
+                }
             }
         };
         this._document.addEventListener('input', this._onInput);
     }
-    static _DeepClone(element) {
+    static _deepClone(element) {
         let returnValue;
         const sourceTypeOf = typeof element;
-        const type = (('object' === sourceTypeOf) ? myopie._objectToString.call(element).slice(8, -1) : sourceTypeOf);
+        const type = (('object' === sourceTypeOf) ? Myopie._objectToString.call(element).slice(8, -1) : sourceTypeOf);
         switch (type) {
             case 'Array':
             case 'Object': {
                 returnValue = Array.isArray(element) ? [] : {};
                 for (const key in element) {
                     const value = element[key];
-                    returnValue[key] = myopie._DeepClone(value);
+                    returnValue[key] = Myopie._deepClone(value);
                 }
                 break;
             }
@@ -73,7 +81,7 @@ export default class myopie {
         }
         return returnValue;
     }
-    static _SimilarNode(node1, node2) {
+    static _nodeSimilar(node1, node2) {
         return ((node1.nodeType === node2.nodeType) &&
             (node1.tagName === node2.tagName) &&
             (node1.id === node2.id) &&
@@ -86,7 +94,7 @@ export default class myopie {
                     !node1.href && !node2.href &&
                     !node1.className && !node2.className)));
     }
-    static _DiffNode(nodeTemplate, nodeExisting, ignore) {
+    static _nodeDiff(nodeTemplate, nodeExisting, ignore) {
         const nodesTemplate = nodeTemplate.childNodes;
         const nodesExisting = nodeExisting.childNodes;
         const cL1 = nodesTemplate.length;
@@ -94,11 +102,11 @@ export default class myopie {
             const tmpItem = nodesTemplate[iL1];
             if (nodesExisting.length <= iL1) {
                 switch (tmpItem.nodeType) {
-                    case Node.ELEMENT_NODE: {
+                    case Myopie._nodeTypeElement: {
                         nodeExisting.append(tmpItem.cloneNode(true));
                         break;
                     }
-                    case Node.TEXT_NODE: {
+                    case Myopie._nodeTypeText: {
                         nodeExisting.append(tmpItem.nodeValue);
                         break;
                     }
@@ -107,18 +115,18 @@ export default class myopie {
             else {
                 let currentItem = nodesExisting[iL1];
                 if (!currentItem.isEqualNode(tmpItem)) {
-                    const similar = myopie._SimilarNode(tmpItem, currentItem);
-                    const ahead = (similar ? undefined : Array.from(nodesExisting).slice(iL1 + 1).find((branch) => myopie._SimilarNode(tmpItem, branch)));
+                    const similar = Myopie._nodeSimilar(tmpItem, currentItem);
+                    const ahead = (similar ? undefined : Array.from(nodesExisting).slice(iL1 + 1).find((branch) => (Myopie._nodeTypeElement === branch.nodeType) && Myopie._nodeSimilar(tmpItem, branch)));
                     if (!similar) {
                         currentItem = nodeExisting.insertBefore((ahead ?? tmpItem.cloneNode(true)), ((iL1 < nodesExisting.length) ? currentItem : null));
                     }
                     if (similar || ahead) {
-                        const templateContent = (tmpItem.childNodes?.length) ? null : tmpItem.textContent;
-                        const existingContent = (currentItem.childNodes?.length) ? null : currentItem.textContent;
+                        const templateContent = ((tmpItem.childNodes.length) ? null : tmpItem.textContent);
+                        const existingContent = ((currentItem.childNodes.length) ? null : currentItem.textContent);
                         if (templateContent != existingContent) {
                             currentItem.textContent = templateContent;
                         }
-                        if (Node.ELEMENT_NODE === tmpItem.nodeType) {
+                        if (Myopie._nodeTypeElement === tmpItem.nodeType) {
                             const attributesTemplate = tmpItem.attributes;
                             const attributesExistings = currentItem.attributes;
                             if ('true' === attributesTemplate.getNamedItem('data-myopie-ignore-content')?.value) {
@@ -154,7 +162,7 @@ export default class myopie {
                                     currentItem.innerHTML = '';
                                 }
                                 else {
-                                    myopie._DiffNode(tmpItem, currentItem, { ...ignore });
+                                    Myopie._nodeDiff(tmpItem, currentItem, { ...ignore });
                                 }
                             }
                         }
@@ -167,53 +175,117 @@ export default class myopie {
         }
     }
     destroy() {
-        this._document.removeEventListener('input', this._onInput);
         if ('undefined' !== typeof this._timer) {
             clearTimeout(this._timer);
             this._timer = undefined;
         }
+        this._document.removeEventListener('input', this._onInput);
+        for (const [selector, handlers] of this._handlersPermanent) {
+            const items = this._document.querySelectorAll(selector);
+            if (items.length && handlers.length) {
+                for (const item of items) {
+                    for (const { event: event, listener: listener } of handlers) {
+                        item.removeEventListener(event, listener);
+                    }
+                }
+            }
+        }
     }
-    HooksInitAddPre(hookFunction) {
+    hooksInitAddPre(hookFunction) {
         this._hooks.init.pre.push(hookFunction);
     }
-    HooksInitAddPost(hookFunction) {
+    hooksInitAddPost(hookFunction) {
         this._hooks.init.post.push(hookFunction);
     }
-    HooksRenderAddPre(hookFunction) {
+    hooksRenderAddPre(hookFunction) {
         this._hooks.render.pre.push(hookFunction);
     }
-    HooksRenderAddPost(hookFunction) {
+    hooksRenderAddPost(hookFunction) {
         this._hooks.render.post.push(hookFunction);
+    }
+    handlersPermanentAdd(selector, event, listener) {
+        const items = this._handlersPermanent.get(selector) ?? [];
+        let returnValue = !items.some((item) => (event === item.event && listener === item.listener));
+        if (returnValue) {
+            this._handlersPermanent.set(selector, [...items, { event: event, listener: listener }]);
+        }
+        return returnValue;
+    }
+    handlersPermanentDel(selector, event, listener) {
+        let returnValue = false;
+        if (this._handlersPermanent.has(selector)) {
+            let items = this._handlersPermanent.get(selector) ?? [];
+            if (event) {
+                const itemsToKeep = items.filter((item) => !(item.event === event && (!listener || listener === item.listener)));
+                if (itemsToKeep.length < items.length) {
+                    if (itemsToKeep.length) {
+                        items = items.filter((item) => !itemsToKeep.includes(item));
+                        this._handlersPermanent.set(selector, itemsToKeep);
+                    }
+                    else {
+                        this._handlersPermanent.delete(selector);
+                    }
+                    returnValue = true;
+                }
+            }
+            else {
+                this._handlersPermanent.delete(selector);
+                returnValue = true;
+            }
+            items.forEach(({ event, listener }) => {
+                this._document.querySelectorAll(selector).forEach((item) => item.removeEventListener(event, listener));
+            });
+        }
+        return returnValue;
     }
     render() {
         clearTimeout(this._timer);
         this._timer = undefined;
         const htmlExisting = this._document.querySelector(this._selector);
         if (null != htmlExisting) {
-            if (!this._inited) {
-                this._hooks.init.pre.forEach((hook) => hook(this._dataCurrent));
-            }
-            else {
-                this._hooks.render.pre.forEach((hook) => hook(this._dataCurrent, this._dataPrevious));
-            }
-            const parser = new DOMParser();
-            const tmpValue = parser.parseFromString(this._template(this._dataCurrent), 'text/html');
-            if (tmpValue.head && tmpValue.head.childNodes && tmpValue.head.childNodes.length) {
-                Array.from(tmpValue.head.childNodes).reverse().forEach(function (node) { tmpValue.body.insertBefore(node, tmpValue.body.firstChild); });
-            }
-            const htmlTemplate = (tmpValue && tmpValue.body) ? tmpValue.body : this._document.createElement('body');
-            myopie._DiffNode(htmlTemplate, htmlExisting, { content: false, style: false });
-            htmlExisting.querySelectorAll('*').forEach((item) => Array.from(item.attributes).forEach((attr) => {
-                if (attr.name.startsWith('data-myopie-')) {
-                    item.removeAttribute(attr.name);
+            const tmpValue = this._template(this._dataCurrent);
+            if (tmpValue !== this._lastRendering) {
+                this._lastRendering = tmpValue;
+                this._templateElement.innerHTML = tmpValue;
+                for (const [selector, handlers] of this._handlersPermanent) {
+                    const items = this._document.querySelectorAll(selector);
+                    if (items.length && handlers.length) {
+                        for (const item of items) {
+                            for (const { event: event, listener: listener } of handlers) {
+                                item.removeEventListener(event, listener);
+                            }
+                        }
+                    }
                 }
-            }));
-            if (!this._inited) {
-                this._hooks.init.post.forEach((hook) => hook(this._dataCurrent));
-                this._inited = true;
-            }
-            else {
-                this._hooks.render.post.forEach((hook) => hook(this._dataCurrent, this._dataPrevious));
+                if (!this._inited) {
+                    this._hooks.init.pre.forEach((hook) => hook(this._dataCurrent));
+                }
+                else {
+                    this._hooks.render.pre.forEach((hook) => hook(this._dataCurrent, this._dataPrevious));
+                }
+                Myopie._nodeDiff(this._templateElement.content, htmlExisting, { content: false, style: false });
+                htmlExisting.querySelectorAll('*').forEach((item) => Array.from(item.attributes).forEach((attr) => {
+                    if (attr.name.startsWith('data-myopie-')) {
+                        item.removeAttribute(attr.name);
+                    }
+                }));
+                if (!this._inited) {
+                    this._hooks.init.post.forEach((hook) => hook(this._dataCurrent));
+                    this._inited = true;
+                }
+                else {
+                    this._hooks.render.post.forEach((hook) => hook(this._dataCurrent, this._dataPrevious));
+                }
+                for (const [selector, handlers] of this._handlersPermanent) {
+                    const items = this._document.querySelectorAll(selector);
+                    if (items.length && handlers.length) {
+                        for (const item of items) {
+                            for (const { event: event, listener: listener } of handlers) {
+                                item.addEventListener(event, listener);
+                            }
+                        }
+                    }
+                }
             }
             this._dataPrevious = null;
         }
@@ -252,7 +324,7 @@ export default class myopie {
         let resetPrevious = false;
         if (null === this._dataPrevious) {
             resetPrevious = true;
-            this._dataPrevious = myopie._DeepClone(this._dataCurrent);
+            this._dataPrevious = Myopie._deepClone(this._dataCurrent);
         }
         let tmpValue = this._dataCurrent;
         let changed = false;

@@ -6,13 +6,13 @@
 	<div id="testcontainer"></div>
 	<style>.gutter { width:100px } </style>
 	<script type="module">
-//import Myopie from 'https://unpkg.com/myopie.js/myopie.min.js';
-import Myopie from "./Myopie.js";
+import Myopie from 'https://unpkg.com/myopie.js/myopie.min.js';
+//import Myopie from "./myopie.js";
 
 function render( data ) {
 	return "<div><input type='text' name='testText' value='" + data.content.string + "'></div>";
 }
-const myopie = new Myopie( "#testcontainer", render, [ ['input[name="testText"]', 'content/string']] );
+const myopie = new Myopie( document, "#testcontainer", render, [ ['input[name="testText"]', 'content/string']] );
 myopie.set( 'content/string', 'foo' );
 setTimeout( () => {
 console.log( 'Timeout 1');
