@@ -16,6 +16,7 @@ I thought would be a perfect name for a skinned, simplified, alternative to Vue 
 - **Efficient DOM diffing**: Only updates changed parts of the DOM.
 - **Lifecycle hooks**: Customize initialization and rendering.
 - **Lightweight**: Minimal overhead for small to medium-sized projects.
+- **Template engine agnostic**: compatible with any generic template engine.
 
 ---
 

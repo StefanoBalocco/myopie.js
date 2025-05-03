@@ -28,19 +28,19 @@ export default class Myopie {
 	private static readonly _nodeTypeElement: number = Node.ELEMENT_NODE;
 	private static readonly _nodeTypeText: number = Node.TEXT_NODE;
 	private static readonly _objectToString: ( this: any ) => string = Object.prototype.toString;
-	private readonly _templateElement: HTMLTemplateElement;
+	private readonly _document: Document;
+	private readonly _inputToPath: string[][];
 	private readonly _selector: string;
 	private readonly _template: TemplateEngine;
-	private readonly _timeout: number = 0;
-	private readonly _inputToPath: string[][];
-	private readonly _document: Document;
+	private readonly _templateElement: HTMLTemplateElement;
+	private readonly _timeout: number;
 	private readonly _onInput: ( event: Event ) => void;
-	private _lastRendering: Undefinedable<string>;
-	private _timer: Undefinedable<number> = undefined;
+	private readonly _handlersPermanent: Map<string, EventHandler[]> = new Map<string, EventHandler[]>();
 	private _dataCurrent: any = {};
 	private _dataPrevious: any = null;
 	private _inited: boolean = false;
-	private readonly _handlersPermanent: Map<string, EventHandler[]> = new Map<string, EventHandler[]>();
+	private _lastRendering: Undefinedable<string>;
+	private _timer: Undefinedable<number>;
 	private _hooks: Hooks = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
 
 	public constructor( document: Document, selector: string, template: TemplateEngine, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 100, renderOnInput: boolean = true ) {
@@ -52,12 +52,12 @@ export default class Myopie {
 		this._dataCurrent = Myopie._deepClone( initialData );
 		this._templateElement = document.createElement( 'template' );
 		const extractors: Record<string, ( element: HTMLElement ) => any> = {
-			input: ( element ) => {
+			input: ( element: HTMLElement ): string | boolean => {
 				const input = element as HTMLInputElement;
 				return ( input.type === 'checkbox' || input.type === 'radio' ) ? input.checked : input.value;
 			},
-			textarea: ( element ) => ( element as HTMLTextAreaElement ).value,
-			select: ( element ) => ( element as HTMLSelectElement ).value
+			select: ( element: HTMLElement ): string => ( element as HTMLSelectElement ).value,
+			textarea: ( element: HTMLElement ): string => ( element as HTMLTextAreaElement ).value
 		};
 		this._onInput = ( event: Event ): void => {
 			const target: Nullable<EventTarget> = event?.target;
@@ -249,7 +249,7 @@ export default class Myopie {
 
 	public handlersPermanentAdd( selector: string, event: string, listener: ( event: Event ) => void ): boolean {
 		const items: EventHandler[] = this._handlersPermanent.get( selector ) ?? [];
-		let returnValue : boolean = !items.some( ( item: EventHandler ): boolean => ( event === item.event && listener === item.listener ) );
+		let returnValue: boolean = !items.some( ( item: EventHandler ): boolean => ( event === item.event && listener === item.listener ) );
 		if( returnValue ) {
 			this._handlersPermanent.set( selector, [ ...items, { event: event, listener: listener } ] );
 		}
@@ -286,7 +286,8 @@ export default class Myopie {
 		return returnValue;
 	}
 
-	public render(): void {
+	public render(): boolean {
+		let returnValue = true;
 		clearTimeout( this._timer );
 		this._timer = undefined;
 		const htmlExisting: Nullable<HTMLElement> = this._document.querySelector<HTMLElement>( this._selector );
@@ -339,8 +340,9 @@ export default class Myopie {
 			}
 			this._dataPrevious = null;
 		} else {
-			// Missing target id
+			returnValue = false;
 		}
+		return returnValue;
 	}
 
 	public get( path: Nullable<string> ): any {

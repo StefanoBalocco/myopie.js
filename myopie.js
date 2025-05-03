@@ -3,19 +3,19 @@ export default class Myopie {
     static _nodeTypeElement = Node.ELEMENT_NODE;
     static _nodeTypeText = Node.TEXT_NODE;
     static _objectToString = Object.prototype.toString;
-    _templateElement;
+    _document;
+    _inputToPath;
     _selector;
     _template;
-    _timeout = 0;
-    _inputToPath;
-    _document;
+    _templateElement;
+    _timeout;
     _onInput;
-    _lastRendering;
-    _timer = undefined;
+    _handlersPermanent = new Map();
     _dataCurrent = {};
     _dataPrevious = null;
     _inited = false;
-    _handlersPermanent = new Map();
+    _lastRendering;
+    _timer;
     _hooks = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
     constructor(document, selector, template, initialData = {}, inputToPath = [], timeout = 100, renderOnInput = true) {
         this._document = document;
@@ -30,8 +30,8 @@ export default class Myopie {
                 const input = element;
                 return (input.type === 'checkbox' || input.type === 'radio') ? input.checked : input.value;
             },
-            textarea: (element) => element.value,
-            select: (element) => element.value
+            select: (element) => element.value,
+            textarea: (element) => element.value
         };
         this._onInput = (event) => {
             const target = event?.target;
@@ -239,6 +239,7 @@ export default class Myopie {
         return returnValue;
     }
     render() {
+        let returnValue = true;
         clearTimeout(this._timer);
         this._timer = undefined;
         const htmlExisting = this._document.querySelector(this._selector);
@@ -290,7 +291,9 @@ export default class Myopie {
             this._dataPrevious = null;
         }
         else {
+            returnValue = false;
         }
+        return returnValue;
     }
     get(path) {
         let returnValue;

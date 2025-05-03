@@ -6,19 +6,19 @@ export default class Myopie {
     private static readonly _nodeTypeElement;
     private static readonly _nodeTypeText;
     private static readonly _objectToString;
-    private readonly _templateElement;
+    private readonly _document;
+    private readonly _inputToPath;
     private readonly _selector;
     private readonly _template;
+    private readonly _templateElement;
     private readonly _timeout;
-    private readonly _inputToPath;
-    private readonly _document;
     private readonly _onInput;
-    private _lastRendering;
-    private _timer;
+    private readonly _handlersPermanent;
     private _dataCurrent;
     private _dataPrevious;
     private _inited;
-    private readonly _handlersPermanent;
+    private _lastRendering;
+    private _timer;
     private _hooks;
     constructor(document: Document, selector: string, template: TemplateEngine, initialData?: any, inputToPath?: string[][], timeout?: number, renderOnInput?: boolean);
     private static _deepClone;
@@ -31,7 +31,7 @@ export default class Myopie {
     hooksRenderAddPost(hookFunction: HookRender): void;
     handlersPermanentAdd(selector: string, event: string, listener: (event: Event) => void): boolean;
     handlersPermanentDel(selector: string, event?: string, listener?: (event: Event) => void): boolean;
-    render(): void;
+    render(): boolean;
     get(path: Nullable<string>): any;
     set(path: string, value: any, render?: boolean): void;
 }
