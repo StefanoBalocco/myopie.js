@@ -59,7 +59,7 @@ const myopie = new Myopie(
 );
 ```
 
-- **`document'** (object): The document object.
+- **`document`** (object): The document object.
 - **`target`** (string): Selector for the root element.
 - **`renderFunction`** (function): Function returning the HTML string to render.
 - **`initialState`** (object): Initial state data.
@@ -71,6 +71,7 @@ const myopie = new Myopie(
 #### `render()`
 
 Manually triggers the rendering of the DOM.
+Return false if the target selector is missing, true otherwise.
 
 ```javascript
 myopie.render();
