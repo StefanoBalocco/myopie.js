@@ -77,6 +77,14 @@ Return false if the target selector is missing, true otherwise.
 myopie.render();
 ```
 
+#### `renderDebounce()`
+
+If debounce is greater than zero, set a timer for the next render; otherwise call the render.
+
+```javascript
+myopie.renderDebounce();
+```
+
 #### `destroy()`
 
 Removes all event listeners (input bindings and permanent handlers) and clears timers.
