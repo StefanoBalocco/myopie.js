@@ -25,10 +25,68 @@ type Hooks = {
 }
 
 export default class Myopie {
+	private static readonly _document: Document = document;
+	private static readonly _objectToString: ( this: any ) => string = Object.prototype.toString;
 	private static readonly _nodeTypeElement: number = Node.ELEMENT_NODE;
 	private static readonly _nodeTypeText: number = Node.TEXT_NODE;
-	private static readonly _objectToString: ( this: any ) => string = Object.prototype.toString;
-	private readonly _document: Document;
+	private static readonly _regexpPathSplit: RegExp = /(?<!(?<!\\)\\)\//;
+	private static readonly _extractors: Record<string, ( element: HTMLElement ) => any> = {
+		input: ( element: HTMLElement ): string | boolean => {
+			const input = element as HTMLInputElement;
+			return ( [ 'checkbox', 'radio' ].includes( input.type ) ? input.checked : input.value );
+		},
+		select: ( element: HTMLElement ): string => ( element as HTMLSelectElement ).value,
+		textarea: ( element: HTMLElement ): string => ( element as HTMLTextAreaElement ).value
+	};
+	private static readonly _navigators: Record<string, ( container: any, path: string, create: boolean ) => [ boolean, any ]> = {
+		Array: ( container: any, path: string, create: boolean = false ): [ boolean, any ] => {
+			const returnValue: [ boolean, any ] = [ false, undefined ];
+			const index: number = Number( path );
+			if( !isNaN( index ) ) {
+				if( create ) {
+					if( undefined === container[ index ] ) {
+						container[ index ] = {};
+						returnValue[ 0 ] = true;
+					}
+				}
+				returnValue[ 1 ] = container[ index ];
+			}
+			return returnValue;
+		},
+		Map: ( container: any, path: string, create: boolean = false ): [ boolean, any ] => {
+			const returnValue: [ boolean, any ] = [ false, undefined ];
+			if( create ) {
+				if( !container.has( path ) ) {
+					returnValue[ 0 ] = true;
+					container.set( path, {} );
+				}
+			}
+			returnValue[ 1 ] = container.get( path );
+			return returnValue;
+		},
+		Object: ( container: any, path: string, create: boolean = false ): [ boolean, any ] => {
+			const returnValue: [ boolean, any ] = [ false, undefined ];
+			if( create ) {
+				if( undefined === container[ path ] ) {
+					returnValue[ 0 ] = true;
+					container[ path ] = {};
+				}
+			}
+			returnValue[ 1 ] = container[ path ];
+			return returnValue;
+		},
+		Set: ( container: any, path: string, _: boolean = false ): [ boolean, any ] => {
+			const returnValue: [ boolean, any ] = [ false, undefined ];
+			const index: number = Number( path );
+			if( !isNaN( index ) ) {
+				const tmpValue: any[] = Array.from( container );
+				if( undefined !== tmpValue[ index ] ) {
+					returnValue[ 1 ] = tmpValue[ index ];
+				}
+			}
+			return returnValue;
+		}
+	};
 	private readonly _inputToPath: string[][];
 	private readonly _selector: string;
 	private readonly _template: TemplateEngine;
@@ -37,34 +95,25 @@ export default class Myopie {
 	private readonly _onInput: ( event: Event ) => void;
 	private readonly _handlersPermanent: Map<string, EventHandler[]> = new Map<string, EventHandler[]>();
 	private _dataCurrent: any = {};
-	private _dataPrevious: any = null;
+	private _dataPrevious: any;
 	private _inited: boolean = false;
 	private _lastRendering: Undefinedable<string>;
 	private _timer: Undefinedable<number>;
 	private _hooks: Hooks = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
 
-	public constructor( document: Document, selector: string, template: TemplateEngine, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 100, renderOnInput: boolean = true ) {
-		this._document = document;
+	public constructor( selector: string, template: TemplateEngine, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 100, renderOnInput: boolean = true ) {
 		this._selector = selector;
 		this._template = template;
 		this._timeout = timeout;
 		this._inputToPath = inputToPath;
 		this._dataCurrent = Myopie._deepClone( initialData );
 		this._templateElement = document.createElement( 'template' );
-		const extractors: Record<string, ( element: HTMLElement ) => any> = {
-			input: ( element: HTMLElement ): string | boolean => {
-				const input = element as HTMLInputElement;
-				return ( input.type === 'checkbox' || input.type === 'radio' ) ? input.checked : input.value;
-			},
-			select: ( element: HTMLElement ): string => ( element as HTMLSelectElement ).value,
-			textarea: ( element: HTMLElement ): string => ( element as HTMLTextAreaElement ).value
-		};
 		this._onInput = ( event: Event ): void => {
 			const target: Nullable<EventTarget> = event?.target;
 			if( target instanceof HTMLElement ) {
 				const tagName: string = target.tagName.toLowerCase();
-				const extractor: ( element: HTMLElement ) => any = extractors[ tagName ];
-				if( !!extractor ) {
+				const extractor: Undefinedable<( ( element: HTMLElement ) => any )> = Myopie._extractors[ tagName ];
+				if( extractor ) {
 					this._inputToPath.some( ( [ selector, path ]: string[] ): boolean => {
 						let returnValue: boolean = false;
 						if( target.matches( selector ) ) {
@@ -76,15 +125,14 @@ export default class Myopie {
 				}
 			}
 		};
-		this._document.addEventListener( 'input', this._onInput );
+		Myopie._document.addEventListener( 'input', this._onInput );
 	}
 
 	// Initially ripped from https://github.com/angus-c/just
 	// Package: collection-clone
 	private static _deepClone( element: any ): any {
-		let returnValue: any;
-		const sourceTypeOf: string = typeof element;
-		const type: string = ( ( 'object' === sourceTypeOf ) ? Myopie._objectToString.call( element ).slice( 8, -1 ) : sourceTypeOf );
+		let returnValue: any = element;
+		const type: string = Myopie._objectToString.call( element ).slice( 8, -1 );
 		switch( type ) {
 			case 'Array':
 			case 'Object': {
@@ -103,12 +151,32 @@ export default class Myopie {
 				returnValue = RegExp( element.source, element.flags );
 				break;
 			}
-			default: {
-				returnValue = element;
+			case 'Set': {
+				returnValue = new Set();
+				for( const value of element ) {
+					returnValue.add( Myopie._deepClone( value ) );
+				}
+				break;
+			}
+			case 'Map': {
+				returnValue = new Map();
+				for( const [ key, value ] of element ) {
+					returnValue.set( key, Myopie._deepClone( value ) );
+				}
 				break;
 			}
 		}
 		return returnValue;
+	}
+
+	private static _removeEventListeners( items: NodeListOf<HTMLElement>, handlers: EventHandler[] ): void {
+		if( items.length && handlers.length ) {
+			for( const item of items ) {
+				for( const { event: event, listener: listener } of handlers ) {
+					item.removeEventListener( event, listener );
+				}
+			}
+		}
 	}
 
 	private static _nodeSimilar( node1: Element, node2: Element ): boolean {
@@ -213,21 +281,26 @@ export default class Myopie {
 		}
 	}
 
+	public renderDebounce(): void {
+		if( this._timeout > 0 ) {
+			if( undefined !== this._timer ) {
+				clearTimeout( this._timer );
+			}
+			this._timer = setTimeout( () => this.render(), this._timeout );
+		} else {
+			this.render();
+		}
+	}
+
 	public destroy(): void {
-		if( 'undefined' !== typeof this._timer ) {
+		if( undefined !== this._timer ) {
 			clearTimeout( this._timer );
 			this._timer = undefined;
 		}
-		this._document.removeEventListener( 'input', this._onInput );
+		Myopie._document.removeEventListener( 'input', this._onInput );
 		for( const [ selector, handlers ] of this._handlersPermanent ) {
-			const items: NodeListOf<HTMLElement> = this._document.querySelectorAll<HTMLElement>( selector );
-			if( items.length && handlers.length ) {
-				for( const item of items ) {
-					for( const { event: event, listener: listener } of handlers ) {
-						item.removeEventListener( event, listener );
-					}
-				}
-			}
+			const items: NodeListOf<HTMLElement> = Myopie._document.querySelectorAll<HTMLElement>( selector );
+			Myopie._removeEventListeners( items, handlers );
 		}
 	}
 
@@ -258,15 +331,15 @@ export default class Myopie {
 
 	public handlersPermanentDel( selector: string, event?: string, listener?: ( event: Event ) => void ): boolean {
 		let returnValue: boolean = false;
-		if( this._handlersPermanent.has( selector ) ) {
-			let items: EventHandler[] = this._handlersPermanent.get( selector ) ?? [];
+		let handlers: EventHandler[] = this._handlersPermanent.get( selector ) ?? [];
+		if( 0 < handlers.length ) {
 			if( event ) {
-				const itemsToKeep: EventHandler[] = items.filter(
+				const itemsToKeep: EventHandler[] = handlers.filter(
 					( item: EventHandler ): boolean => !( item.event === event && ( !listener || listener === item.listener ) )
 				);
-				if( itemsToKeep.length < items.length ) {
+				if( itemsToKeep.length < handlers.length ) {
 					if( itemsToKeep.length ) {
-						items = items.filter( ( item: EventHandler ): boolean => !itemsToKeep.includes( item ) );
+						handlers = handlers.filter( ( item: EventHandler ): boolean => !itemsToKeep.includes( item ) );
 						this._handlersPermanent.set( selector, itemsToKeep );
 					} else {
 						this._handlersPermanent.delete( selector );
@@ -277,11 +350,8 @@ export default class Myopie {
 				this._handlersPermanent.delete( selector );
 				returnValue = true;
 			}
-			items.forEach(
-				( { event, listener }: EventHandler ): void => {
-					this._document.querySelectorAll<HTMLElement>( selector ).forEach( ( item: HTMLElement ): void => item.removeEventListener( event, listener ) );
-				}
-			);
+			const items: NodeListOf<HTMLElement> = Myopie._document.querySelectorAll<HTMLElement>( selector );
+			Myopie._removeEventListeners( items, handlers );
 		}
 		return returnValue;
 	}
@@ -290,21 +360,15 @@ export default class Myopie {
 		let returnValue = true;
 		clearTimeout( this._timer );
 		this._timer = undefined;
-		const htmlExisting: Nullable<HTMLElement> = this._document.querySelector<HTMLElement>( this._selector );
+		const htmlExisting: Nullable<HTMLElement> = Myopie._document.querySelector<HTMLElement>( this._selector );
 		if( null != htmlExisting ) {
 			const tmpValue: string = this._template( this._dataCurrent );
 			if( tmpValue !== this._lastRendering ) {
 				this._lastRendering = tmpValue;
 				this._templateElement.innerHTML = tmpValue;
 				for( const [ selector, handlers ] of this._handlersPermanent ) {
-					const items: NodeListOf<HTMLElement> = this._document.querySelectorAll<HTMLElement>( selector );
-					if( items.length && handlers.length ) {
-						for( const item of items ) {
-							for( const { event: event, listener: listener } of handlers ) {
-								item.removeEventListener( event, listener );
-							}
-						}
-					}
+					const items: NodeListOf<HTMLElement> = Myopie._document.querySelectorAll<HTMLElement>( selector );
+					Myopie._removeEventListeners( items, handlers );
 				}
 				if( !this._inited ) {
 					this._hooks.init.pre.forEach( ( hook: HookInit ): void => hook( this._dataCurrent ) );
@@ -328,7 +392,7 @@ export default class Myopie {
 					this._hooks.render.post.forEach( ( hook: HookRender ): void => hook( this._dataCurrent, this._dataPrevious ) );
 				}
 				for( const [ selector, handlers ] of this._handlersPermanent ) {
-					const items: NodeListOf<HTMLElement> = this._document.querySelectorAll<HTMLElement>( selector );
+					const items: NodeListOf<HTMLElement> = Myopie._document.querySelectorAll<HTMLElement>( selector );
 					if( items.length && handlers.length ) {
 						for( const item of items ) {
 							for( const { event: event, listener: listener } of handlers ) {
@@ -338,7 +402,7 @@ export default class Myopie {
 					}
 				}
 			}
-			this._dataPrevious = null;
+			this._dataPrevious = undefined;
 		} else {
 			returnValue = false;
 		}
@@ -348,22 +412,19 @@ export default class Myopie {
 	public get( path: Nullable<string> ): any {
 		let returnValue: any;
 		if( null != path ) {
-			const components: string [] = path.split( /(?<!(?<!\\)\\)\// );
+			const components: string [] = path.split( Myopie._regexpPathSplit );
 			const cL1: number = components.length;
 			if( 0 < cL1 ) {
-				returnValue = this._dataCurrent;
-				for( let iL1: number = 0; ( ( iL1 < cL1 ) && ( 'undefined' !== typeof returnValue ) ); iL1++ ) {
-					if( Array.isArray( returnValue ) || ( 'object' === typeof ( returnValue ) ) ) {
-						const elem: string = components[ iL1 ];
-						if( 'undefined' !== typeof returnValue[ elem ] ) {
-							returnValue = returnValue[ elem ];
-						} else {
-							returnValue = undefined;
+				returnValue = components.reduce(
+					( current: any, component: string ): any => {
+						if( undefined !== current ) {
+							const tag: string = Myopie._objectToString.call( current ).slice( 8, -1 );
+							const tmpValue: [ boolean, any ] = Myopie._navigators[ tag ] ? Myopie._navigators[ tag ]( current, component, false ) : [ false, undefined ];
+							current = tmpValue[ 1 ];
 						}
-					} else {
-						returnValue = undefined;
-					}
-				}
+						return current;
+					}, this._dataCurrent
+				);
 			}
 		}
 		if( 'function' === typeof returnValue ) {
@@ -372,48 +433,47 @@ export default class Myopie {
 		return returnValue;
 	}
 
-	public set( path: string, value: any, render = true ): void {
+	public set( path: string, value: any, render = true ): boolean {
+		let returnValue: boolean = false;
 		let resetPrevious: boolean = false;
-		if( null === this._dataPrevious ) {
+		if( !this._dataPrevious ) {
 			resetPrevious = true;
 			this._dataPrevious = Myopie._deepClone( this._dataCurrent );
 		}
-		let tmpValue: any = this._dataCurrent;
 		let changed: boolean = false;
-		const components: string[] = path.split( /(?<!(?<!\\)\\)\// );
-		const cL1: number = components.length - 1;
-		for( let iL1: number = 0; iL1 < cL1; iL1++ ) {
-			let tmpPath: string = components[ iL1 ];
-			if( 'undefined' === typeof tmpValue[ tmpPath ] ) {
+		const components: string[] = path.split( Myopie._regexpPathSplit );
+		const lastComponentIndex: number = components.length - 1;
+		const target: any = components.slice( 0, lastComponentIndex ).reduce(
+			( current: any, component: string ): any => {
+				if( undefined !== current ) {
+					const tag: string = Myopie._objectToString.call( current ).slice( 8, -1 );
+					let result: boolean;
+					[ result, current ] = Myopie._navigators[ tag ] ? Myopie._navigators[ tag ]( current, component, true ) : [ false, undefined ];
+					changed ||= result;
+				}
+				return current;
+			}, this._dataCurrent
+		);
+		if( undefined !== target ) {
+			returnValue = true;
+			const lastComponent: string = components[ lastComponentIndex ];
+			const currentValue: any = target[ lastComponent ];
+			if( currentValue !== value ) {
 				changed = true;
-				tmpValue[ tmpPath ] = {};
-			}
-			tmpValue = tmpValue[ tmpPath ];
-		}
-		const lastComponent: string = components[ cL1 ];
-		const currentValue: any = tmpValue[ lastComponent ];
-		if( currentValue !== value ) {
-			if( 'undefined' !== typeof value ) {
-				changed = true;
-				tmpValue[ lastComponent ] = value;
-			} else if( 'undefined' !== typeof tmpValue[ lastComponent ] ) {
-				changed = true;
-				delete tmpValue[ lastComponent ];
-			}
-		}
-		if( changed ) {
-			if( render ) {
-				if( this._timeout > 0 ) {
-					if( 'undefined' != typeof this._timer ) {
-						clearTimeout( this._timer );
-					}
-					this._timer = setTimeout( () => this.render(), this._timeout );
+				if( undefined !== value ) {
+					target[ lastComponent ] = value;
 				} else {
-					this.render();
+					delete target[ lastComponent ];
 				}
 			}
-		} else if( resetPrevious ) {
-			this._dataPrevious = null;
+			if( changed ) {
+				if( render ) {
+					this.renderDebounce();
+				}
+			} else if( resetPrevious ) {
+				this._dataPrevious = undefined;
+			}
 		}
+		return returnValue;
 	}
 }

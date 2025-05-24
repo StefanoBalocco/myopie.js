@@ -3,10 +3,13 @@ type TemplateEngine = (data: any) => string;
 type HookInit = (dataCurrent: any) => void;
 type HookRender = (dataCurrent: any, dataPrevious: any) => void;
 export default class Myopie {
+    private static readonly _document;
+    private static readonly _objectToString;
     private static readonly _nodeTypeElement;
     private static readonly _nodeTypeText;
-    private static readonly _objectToString;
-    private readonly _document;
+    private static readonly _regexpPathSplit;
+    private static readonly _extractors;
+    private static readonly _navigators;
     private readonly _inputToPath;
     private readonly _selector;
     private readonly _template;
@@ -20,10 +23,12 @@ export default class Myopie {
     private _lastRendering;
     private _timer;
     private _hooks;
-    constructor(document: Document, selector: string, template: TemplateEngine, initialData?: any, inputToPath?: string[][], timeout?: number, renderOnInput?: boolean);
+    constructor(selector: string, template: TemplateEngine, initialData?: any, inputToPath?: string[][], timeout?: number, renderOnInput?: boolean);
     private static _deepClone;
+    private static _removeEventListeners;
     private static _nodeSimilar;
     private static _nodeDiff;
+    renderDebounce(): void;
     destroy(): void;
     hooksInitAddPre(hookFunction: HookInit): void;
     hooksInitAddPost(hookFunction: HookInit): void;
@@ -33,6 +38,6 @@ export default class Myopie {
     handlersPermanentDel(selector: string, event?: string, listener?: (event: Event) => void): boolean;
     render(): boolean;
     get(path: Nullable<string>): any;
-    set(path: string, value: any, render?: boolean): void;
+    set(path: string, value: any, render?: boolean): boolean;
 }
 export {};

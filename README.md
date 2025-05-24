@@ -26,7 +26,7 @@ In browser:
 
 ```html
 <script type="module">
-import Myopie from 'https://www.unpkg.com/myopie.js/myopie.min.js';
+import Myopie from 'https://cdn.jsdelivr.net/gh/StefanoBalocco/myopie.js/myopie.min.js';
 ...
 </script>
 ```
@@ -174,7 +174,7 @@ myopie.HooksRenderAddPost((dataCurrent, dataPrevious) => {
 ```html
 <div id="app"></div>
 <script type="module">
-  import Myopie from 'https://www.unpkg.com/myopie.js/myopie.min.js';
+  import Myopie from 'https://cdn.jsdelivr.net/gh/StefanoBalocco/myopie.js/myopie.min.js';
 
   const myopie = new Myopie(
     '#app',
