@@ -30,6 +30,44 @@ export default class Myopie {
 	private static readonly _nodeTypeElement: number = Node.ELEMENT_NODE;
 	private static readonly _nodeTypeText: number = Node.TEXT_NODE;
 	private static readonly _regexpPathSplit: RegExp = /(?<!(?<!\\)\\)\//;
+	private static readonly _comparators: Record<string, ( node1: HTMLElement, node2: HTMLElement ) => boolean> = {
+		input: ( node1: HTMLElement, node2: HTMLElement ): boolean => {
+			const tmpItem1 = node1 as HTMLInputElement;
+			const tmpItem2 = node2 as HTMLInputElement;
+			return (
+				( tmpItem1.type === tmpItem2.type ) &&
+				( tmpItem1.name === tmpItem2.name )
+			);
+		},
+		img: ( node1: HTMLElement, node2: HTMLElement ): boolean => {
+			const tmpItem1 = node1 as HTMLImageElement;
+			const tmpItem2 = node2 as HTMLImageElement;
+			return (
+				!!tmpItem1.src && ( tmpItem1.src === tmpItem2.src )
+			);
+		},
+		script: ( node1: HTMLElement, node2: HTMLElement ): boolean => {
+			const tmpItem1 = node1 as HTMLScriptElement;
+			const tmpItem2 = node2 as HTMLScriptElement;
+			return (
+				!!tmpItem1.src && ( tmpItem1.src === tmpItem2.src )
+			);
+		},
+		a: ( node1: HTMLElement, node2: HTMLElement ): boolean => {
+			const tmpItem1 = node1 as HTMLAnchorElement;
+			const tmpItem2 = node2 as HTMLAnchorElement;
+			return (
+				!!tmpItem1.href && ( tmpItem1.href === tmpItem2.href )
+			);
+		},
+		link: ( node1: HTMLElement, node2: HTMLElement ): boolean => {
+			const tmpItem1 = node1 as HTMLLinkElement;
+			const tmpItem2 = node2 as HTMLLinkElement;
+			return (
+				!!tmpItem1.href && ( tmpItem1.href === tmpItem2.href )
+			);
+		}
+	};
 	private static readonly _extractors: Record<string, ( element: HTMLElement ) => any> = {
 		input: ( element: HTMLElement ): string | boolean => {
 			const input = element as HTMLInputElement;
@@ -75,7 +113,7 @@ export default class Myopie {
 			returnValue[ 1 ] = container[ path ];
 			return returnValue;
 		},
-		Set: ( container: any, path: string, _: boolean = false ): [ boolean, any ] => {
+		Set: ( container: any, path: string, _create: boolean = false ): [ boolean, any ] => {
 			const returnValue: [ boolean, any ] = [ false, undefined ];
 			const index: number = Number( path );
 			if( !isNaN( index ) ) {
@@ -179,29 +217,43 @@ export default class Myopie {
 		}
 	}
 
-	private static _nodeSimilar( node1: Element, node2: Element ): boolean {
-		return (
-			( node1.nodeType === node2.nodeType ) &&
-			( node1.tagName === node2.tagName ) &&
-			( node1.id === node2.id ) &&
-			(
-				!!node1.id ||
-				( ( <HTMLImageElement> node1 ).src && ( ( <HTMLImageElement> node1 ).src === ( <HTMLImageElement> node2 ).src ) ) ||
-				( ( <HTMLLinkElement> node1 ).href && ( ( <HTMLLinkElement> node1 ).href === ( <HTMLLinkElement> node2 ).href ) ) ||
-				( node1.className === node2.className ) ||
-				( node1.childElementCount === node2.childElementCount ) ||
-				(
-					!( <HTMLImageElement> node1 ).src && !( <HTMLImageElement> node2 ).src &&
-					!( <HTMLLinkElement> node1 ).href && !( <HTMLLinkElement> node2 ).href &&
-					!node1.className && !node2.className
-				)
-			)
-		);
+	private static _attributesFilter( attribute: Attr ): boolean {
+		return attribute.name.startsWith( 'data-' ) && !attribute.name.startsWith( 'data-myopie-' );
+	}
+
+	private static _attributesMap( attribute: Attr ): string {
+		return [ attribute.name, attribute.value ].join( String.fromCharCode( 0 ) );
+	}
+
+	public static _nodeSimilar( node1: Element, node2: Element ): boolean {
+		let returnValue: boolean = ( node1.nodeType === Myopie._nodeTypeElement ) && ( node1.nodeType === node2.nodeType ) && ( node1.tagName === node2.tagName ) && ( node1.id === node2.id );
+		if( !node1.id && returnValue ) {
+			const tagName: string = node1.tagName.toLowerCase();
+			if( tagName && Myopie._comparators[ tagName ] ) {
+				returnValue = Myopie._comparators[ tagName ]( node1 as HTMLElement, node2 as HTMLElement );
+			} else {
+				const attributes1: Attr[] = Array.from( node1.attributes ).filter( Myopie._attributesFilter );
+				const attributes2: Attr[] = Array.from( node2.attributes ).filter( Myopie._attributesFilter );
+				if( attributes1.length || attributes2.length ) {
+					const tmpValue1: string = attributes1.map( Myopie._attributesMap ).sort().join( String.fromCharCode( 0 ) );
+					const tmpValue2: string = attributes2.map( Myopie._attributesMap ).sort().join( String.fromCharCode( 0 ) );
+					returnValue = ( tmpValue1 === tmpValue2 );
+				} else {
+					if( node1.classList.length && node2.classList.length ) {
+						returnValue = ( Array.from( node1.classList ).sort().join( ' ' ) === Array.from( node2.classList ).sort().join( ' ' ) );
+					} else {
+						returnValue = ( node1.childElementCount === node2.childElementCount );
+					}
+				}
+			}
+		}
+		return returnValue;
 	}
 
 	private static _nodeDiff( nodeTemplate: ParentNode, nodeExisting: ParentNode, ignore: { content: boolean, style: boolean } ): void {
 		const nodesTemplate: NodeListOf<ChildNode> = nodeTemplate.childNodes;
 		const nodesExisting: NodeListOf<ChildNode> = nodeExisting.childNodes;
+		const nodesExistingArray: ChildNode[] = Array.from( nodesExisting );
 		const cL1: number = nodesTemplate.length;
 		for( let iL1: number = 0; iL1 < cL1; iL1++ ) {
 			const tmpItem: Element = nodesTemplate[ iL1 ] as Element;
@@ -220,8 +272,9 @@ export default class Myopie {
 				let currentItem: Element = nodesExisting[ iL1 ] as Element;
 				if( !currentItem.isEqualNode( tmpItem ) ) {
 					const similar: boolean = Myopie._nodeSimilar( tmpItem, currentItem );
-					const ahead: Undefinedable<Element> = ( similar ? undefined : Array.from( nodesExisting ).slice( iL1 + 1 ).find(
-							( branch: ChildNode ): boolean => ( Myopie._nodeTypeElement === branch.nodeType ) && Myopie._nodeSimilar( tmpItem, branch as Element ) ) as Element
+					const ahead: Undefinedable<Element> = ( similar ? undefined : nodesExistingArray.slice( iL1 + 1 ).find(
+							( branch: ChildNode ): boolean => Myopie._nodeSimilar( tmpItem, branch as Element )
+						) as Undefinedable<Element>
 					);
 					if( !similar ) {
 						currentItem = nodeExisting.insertBefore<Element>( ( ahead ?? tmpItem.cloneNode( true ) ) as Element, ( ( iL1 < nodesExisting.length ) ? currentItem : null ) );

@@ -8,6 +8,7 @@ export default class Myopie {
     private static readonly _nodeTypeElement;
     private static readonly _nodeTypeText;
     private static readonly _regexpPathSplit;
+    private static readonly _comparators;
     private static readonly _extractors;
     private static readonly _navigators;
     private readonly _inputToPath;
@@ -26,7 +27,9 @@ export default class Myopie {
     constructor(selector: string, template: TemplateEngine, initialData?: any, inputToPath?: string[][], timeout?: number, renderOnInput?: boolean);
     private static _deepClone;
     private static _removeEventListeners;
-    private static _nodeSimilar;
+    private static _attributesFilter;
+    private static _attributesMap;
+    static _nodeSimilar(node1: Element, node2: Element): boolean;
     private static _nodeDiff;
     renderDebounce(): void;
     destroy(): void;

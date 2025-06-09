@@ -5,6 +5,34 @@ export default class Myopie {
     static _nodeTypeElement = Node.ELEMENT_NODE;
     static _nodeTypeText = Node.TEXT_NODE;
     static _regexpPathSplit = /(?<!(?<!\\)\\)\//;
+    static _comparators = {
+        input: (node1, node2) => {
+            const tmpItem1 = node1;
+            const tmpItem2 = node2;
+            return ((tmpItem1.type === tmpItem2.type) &&
+                (tmpItem1.name === tmpItem2.name));
+        },
+        img: (node1, node2) => {
+            const tmpItem1 = node1;
+            const tmpItem2 = node2;
+            return (!!tmpItem1.src && (tmpItem1.src === tmpItem2.src));
+        },
+        script: (node1, node2) => {
+            const tmpItem1 = node1;
+            const tmpItem2 = node2;
+            return (!!tmpItem1.src && (tmpItem1.src === tmpItem2.src));
+        },
+        a: (node1, node2) => {
+            const tmpItem1 = node1;
+            const tmpItem2 = node2;
+            return (!!tmpItem1.href && (tmpItem1.href === tmpItem2.href));
+        },
+        link: (node1, node2) => {
+            const tmpItem1 = node1;
+            const tmpItem2 = node2;
+            return (!!tmpItem1.href && (tmpItem1.href === tmpItem2.href));
+        }
+    };
     static _extractors = {
         input: (element) => {
             const input = element;
@@ -50,7 +78,7 @@ export default class Myopie {
             returnValue[1] = container[path];
             return returnValue;
         },
-        Set: (container, path, _ = false) => {
+        Set: (container, path, _create = false) => {
             const returnValue = [false, undefined];
             const index = Number(path);
             if (!isNaN(index)) {
@@ -148,22 +176,43 @@ export default class Myopie {
             }
         }
     }
+    static _attributesFilter(attribute) {
+        return attribute.name.startsWith('data-') && !attribute.name.startsWith('data-myopie-');
+    }
+    static _attributesMap(attribute) {
+        return [attribute.name, attribute.value].join(String.fromCharCode(0));
+    }
     static _nodeSimilar(node1, node2) {
-        return ((node1.nodeType === node2.nodeType) &&
-            (node1.tagName === node2.tagName) &&
-            (node1.id === node2.id) &&
-            (!!node1.id ||
-                (node1.src && (node1.src === node2.src)) ||
-                (node1.href && (node1.href === node2.href)) ||
-                (node1.className === node2.className) ||
-                (node1.childElementCount === node2.childElementCount) ||
-                (!node1.src && !node2.src &&
-                    !node1.href && !node2.href &&
-                    !node1.className && !node2.className)));
+        let returnValue = (node1.nodeType === Myopie._nodeTypeElement) && (node1.nodeType === node2.nodeType) && (node1.tagName === node2.tagName) && (node1.id === node2.id);
+        if (!node1.id && returnValue) {
+            const tagName = node1.tagName.toLowerCase();
+            if (tagName && Myopie._comparators[tagName]) {
+                returnValue = Myopie._comparators[tagName](node1, node2);
+            }
+            else {
+                const attributes1 = Array.from(node1.attributes).filter(Myopie._attributesFilter);
+                const attributes2 = Array.from(node2.attributes).filter(Myopie._attributesFilter);
+                if (attributes1.length || attributes2.length) {
+                    const tmpValue1 = attributes1.map(Myopie._attributesMap).sort().join(String.fromCharCode(0));
+                    const tmpValue2 = attributes2.map(Myopie._attributesMap).sort().join(String.fromCharCode(0));
+                    returnValue = (tmpValue1 === tmpValue2);
+                }
+                else {
+                    if (node1.classList.length && node2.classList.length) {
+                        returnValue = (Array.from(node1.classList).sort().join(' ') === Array.from(node2.classList).sort().join(' '));
+                    }
+                    else {
+                        returnValue = (node1.childElementCount === node2.childElementCount);
+                    }
+                }
+            }
+        }
+        return returnValue;
     }
     static _nodeDiff(nodeTemplate, nodeExisting, ignore) {
         const nodesTemplate = nodeTemplate.childNodes;
         const nodesExisting = nodeExisting.childNodes;
+        const nodesExistingArray = Array.from(nodesExisting);
         const cL1 = nodesTemplate.length;
         for (let iL1 = 0; iL1 < cL1; iL1++) {
             const tmpItem = nodesTemplate[iL1];
@@ -183,7 +232,7 @@ export default class Myopie {
                 let currentItem = nodesExisting[iL1];
                 if (!currentItem.isEqualNode(tmpItem)) {
                     const similar = Myopie._nodeSimilar(tmpItem, currentItem);
-                    const ahead = (similar ? undefined : Array.from(nodesExisting).slice(iL1 + 1).find((branch) => (Myopie._nodeTypeElement === branch.nodeType) && Myopie._nodeSimilar(tmpItem, branch)));
+                    const ahead = (similar ? undefined : nodesExistingArray.slice(iL1 + 1).find((branch) => Myopie._nodeSimilar(tmpItem, branch)));
                     if (!similar) {
                         currentItem = nodeExisting.insertBefore((ahead ?? tmpItem.cloneNode(true)), ((iL1 < nodesExisting.length) ? currentItem : null));
                     }
