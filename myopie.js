@@ -36,7 +36,7 @@ export default class Myopie {
     static _extractors = {
         input: (element) => {
             const input = element;
-            return (['checkbox', 'radio'].includes(input.type) ? input.checked : input.value);
+            return (['checkbox'].includes(input.type) ? input.checked : input.value);
         },
         select: (element) => element.value,
         textarea: (element) => element.value
@@ -90,7 +90,7 @@ export default class Myopie {
             return returnValue;
         }
     };
-    _inputToPath;
+    _inputToPath = [];
     _selector;
     _template;
     _templateElement;
@@ -107,27 +107,28 @@ export default class Myopie {
         this._selector = selector;
         this._template = template;
         this._timeout = timeout;
-        this._inputToPath = inputToPath;
         this._dataCurrent = Myopie._deepClone(initialData);
         this._templateElement = document.createElement('template');
-        this._onInput = (event) => {
-            const target = event?.target;
-            if (target instanceof HTMLElement) {
-                const tagName = target.tagName.toLowerCase();
-                const extractor = Myopie._extractors[tagName];
-                if (extractor) {
-                    this._inputToPath.some(([selector, path]) => {
-                        let returnValue = false;
-                        if (target.matches(selector)) {
-                            returnValue = true;
-                            this.set(path, extractor(target), renderOnInput);
-                        }
-                        return returnValue;
-                    });
+        if (Array.isArray(inputToPath) && (0 < inputToPath.length)) {
+            this._inputToPath = inputToPath;
+            this._onInput = (event) => {
+                const target = event?.target;
+                if (target instanceof HTMLElement) {
+                    const tagName = target.tagName.toLowerCase();
+                    if (Myopie._extractors[tagName]) {
+                        this._inputToPath.some(([selector, path]) => {
+                            let returnValue = false;
+                            if (target.matches(selector)) {
+                                returnValue = true;
+                                this.set(path, Myopie._extractors[tagName](target), renderOnInput);
+                            }
+                            return returnValue;
+                        });
+                    }
                 }
-            }
-        };
-        Myopie._document.addEventListener('input', this._onInput);
+            };
+            Myopie._document.addEventListener('input', this._onInput);
+        }
     }
     static _deepClone(element) {
         let returnValue = element;
@@ -306,7 +307,9 @@ export default class Myopie {
             clearTimeout(this._timer);
             this._timer = undefined;
         }
-        Myopie._document.removeEventListener('input', this._onInput);
+        if (this._onInput) {
+            Myopie._document.removeEventListener('input', this._onInput);
+        }
         for (const [selector, handlers] of this._handlersPermanent) {
             const items = Myopie._document.querySelectorAll(selector);
             Myopie._removeEventListeners(items, handlers);

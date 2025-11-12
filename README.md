@@ -44,27 +44,27 @@ import Myopie from 'myopie.js';
 
 ### Creating a Myopie Instance
 
-#### `new Myopie(document, target, renderFunction, initialState = {}, bindings = [], debounce = 1000)`
+#### `new Myopie(document, target, renderFunction, initialState = {}, bindings = [], debounce = 1000, renderOnInput = true)`
 
 You can create a Myopie instance by calling its constructor:
 
 ```javascript
 const myopie = new Myopie(
-    document,
     '#app', // Target selector
     (data) => `<div>Hello, ${data.name}!</div>`, // Render function
     { name: 'World' }, // Initial state
     [['input', 'name']], // Input bindings
-    500 // Debounce time in milliseconds
+    500 // Debounce time in milliseconds,
+	true
 );
 ```
 
-- **`document`** (object): The document object.
 - **`target`** (string): Selector for the root element.
 - **`renderFunction`** (function): Function returning the HTML string to render.
 - **`initialState`** (object): Initial state data.
 - **`bindings`** (array): List of input bindings in the format `[selector, path]`.
 - **`debounce`** (number): Debounce time in milliseconds for updates.
+- **`renderOnInput`** (boolean): when an binded input changes, do a render
 
 ### Methods
 

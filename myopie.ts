@@ -71,7 +71,7 @@ export default class Myopie {
 	private static readonly _extractors: Record<string, ( element: HTMLElement ) => any> = {
 		input: ( element: HTMLElement ): string | boolean => {
 			const input = element as HTMLInputElement;
-			return ( [ 'checkbox', 'radio' ].includes( input.type ) ? input.checked : input.value );
+			return ( [ 'checkbox' ].includes( input.type ) ? input.checked : input.value );
 		},
 		select: ( element: HTMLElement ): string => ( element as HTMLSelectElement ).value,
 		textarea: ( element: HTMLElement ): string => ( element as HTMLTextAreaElement ).value
@@ -125,12 +125,12 @@ export default class Myopie {
 			return returnValue;
 		}
 	};
-	private readonly _inputToPath: string[][];
+	private readonly _inputToPath: string[][] = [];
 	private readonly _selector: string;
 	private readonly _template: TemplateEngine;
 	private readonly _templateElement: HTMLTemplateElement;
 	private readonly _timeout: number;
-	private readonly _onInput: ( event: Event ) => void;
+	private readonly _onInput: Undefinedable<( event: Event ) => void>;
 	private readonly _handlersPermanent: Map<string, EventHandler[]> = new Map<string, EventHandler[]>();
 	private _dataCurrent: any = {};
 	private _dataPrevious: any;
@@ -143,27 +143,28 @@ export default class Myopie {
 		this._selector = selector;
 		this._template = template;
 		this._timeout = timeout;
-		this._inputToPath = inputToPath;
 		this._dataCurrent = Myopie._deepClone( initialData );
 		this._templateElement = document.createElement( 'template' );
-		this._onInput = ( event: Event ): void => {
-			const target: Nullable<EventTarget> = event?.target;
-			if( target instanceof HTMLElement ) {
-				const tagName: string = target.tagName.toLowerCase();
-				const extractor: Undefinedable<( ( element: HTMLElement ) => any )> = Myopie._extractors[ tagName ];
-				if( extractor ) {
-					this._inputToPath.some( ( [ selector, path ]: string[] ): boolean => {
-						let returnValue: boolean = false;
-						if( target.matches( selector ) ) {
-							returnValue = true;
-							this.set( path, extractor( target ), renderOnInput );
-						}
-						return returnValue;
-					} );
+		if( Array.isArray( inputToPath ) && ( 0 < inputToPath.length ) ) {
+			this._inputToPath = inputToPath;
+			this._onInput = ( event: Event ): void => {
+				const target: Nullable<EventTarget> = event?.target;
+				if( target instanceof HTMLElement ) {
+					const tagName: string = target.tagName.toLowerCase();
+					if( Myopie._extractors[ tagName ] ) {
+						this._inputToPath.some( ( [ selector, path ]: string[] ): boolean => {
+							let returnValue: boolean = false;
+							if( target.matches( selector ) ) {
+								returnValue = true;
+								this.set( path, Myopie._extractors[ tagName ]( target ), renderOnInput );
+							}
+							return returnValue;
+						} );
+					}
 				}
-			}
-		};
-		Myopie._document.addEventListener( 'input', this._onInput );
+			};
+			Myopie._document.addEventListener( 'input', this._onInput );
+		}
 	}
 
 	// Initially ripped from https://github.com/angus-c/just
@@ -350,7 +351,9 @@ export default class Myopie {
 			clearTimeout( this._timer );
 			this._timer = undefined;
 		}
-		Myopie._document.removeEventListener( 'input', this._onInput );
+		if( this._onInput ) {
+			Myopie._document.removeEventListener( 'input', this._onInput );
+		}
 		for( const [ selector, handlers ] of this._handlersPermanent ) {
 			const items: NodeListOf<HTMLElement> = Myopie._document.querySelectorAll<HTMLElement>( selector );
 			Myopie._removeEventListeners( items, handlers );
@@ -476,7 +479,8 @@ export default class Myopie {
 							current = tmpValue[ 1 ];
 						}
 						return current;
-					}, this._dataCurrent
+					},
+					this._dataCurrent
 				);
 			}
 		}
@@ -505,7 +509,8 @@ export default class Myopie {
 					changed ||= result;
 				}
 				return current;
-			}, this._dataCurrent
+			},
+			this._dataCurrent
 		);
 		if( undefined !== target ) {
 			returnValue = true;
