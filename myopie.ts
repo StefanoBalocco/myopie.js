@@ -69,9 +69,22 @@ export default class Myopie {
 		}
 	};
 	private static readonly _extractors: Record<string, ( element: HTMLElement ) => any> = {
-		input: ( element: HTMLElement ): string | boolean => {
+		input: ( element: HTMLElement ): Undefinedable<string | boolean> => {
 			const input = element as HTMLInputElement;
-			return ( [ 'checkbox' ].includes( input.type ) ? input.checked : input.value );
+			let returnValue;
+			switch( input.type ) {
+				case 'checkbox':
+				case 'radio': {
+					if( input.checked ) {
+						returnValue = input.value;
+					}
+					break;
+				}
+				default: {
+					returnValue = input.value;
+				}
+			}
+			return returnValue;
 		},
 		select: ( element: HTMLElement ): string => ( element as HTMLSelectElement ).value,
 		textarea: ( element: HTMLElement ): string => ( element as HTMLTextAreaElement ).value

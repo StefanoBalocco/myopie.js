@@ -36,7 +36,20 @@ export default class Myopie {
     static _extractors = {
         input: (element) => {
             const input = element;
-            return (['checkbox'].includes(input.type) ? input.checked : input.value);
+            let returnValue;
+            switch (input.type) {
+                case 'checkbox':
+                case 'radio': {
+                    if (input.checked) {
+                        returnValue = input.value;
+                    }
+                    break;
+                }
+                default: {
+                    returnValue = input.value;
+                }
+            }
+            return returnValue;
         },
         select: (element) => element.value,
         textarea: (element) => element.value
