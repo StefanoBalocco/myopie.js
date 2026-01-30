@@ -145,7 +145,7 @@ export default class Myopie {
 	private readonly _timeout: number;
 	private readonly _onInput: Undefinedable<( event: Event ) => void>;
 	private readonly _handlersPermanent: Map<string, EventHandler[]> = new Map<string, EventHandler[]>();
-	private _dataCurrent: any = {};
+	private _dataCurrent: any;
 	private _dataPrevious: any;
 	private _inited: boolean = false;
 	private _lastRendering: Undefinedable<string>;
@@ -239,7 +239,7 @@ export default class Myopie {
 		return [ attribute.name, attribute.value ].join( String.fromCharCode( 0 ) );
 	}
 
-	public static _nodeSimilar( node1: Element, node2: Element ): boolean {
+	private static _nodeSimilar( node1: Element, node2: Element ): boolean {
 		let returnValue: boolean = ( node1.nodeType === Myopie._nodeTypeElement ) && ( node1.nodeType === node2.nodeType ) && ( node1.tagName === node2.tagName ) && ( node1.id === node2.id );
 		if( !node1.id && returnValue ) {
 			const tagName: string = node1.tagName.toLowerCase();

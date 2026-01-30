@@ -110,7 +110,7 @@ export default class Myopie {
     _timeout;
     _onInput;
     _handlersPermanent = new Map();
-    _dataCurrent = {};
+    _dataCurrent;
     _dataPrevious;
     _inited = false;
     _lastRendering;

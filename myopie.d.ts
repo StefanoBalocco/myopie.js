@@ -29,7 +29,7 @@ export default class Myopie {
     private static _removeEventListeners;
     private static _attributesFilter;
     private static _attributesMap;
-    static _nodeSimilar(node1: Element, node2: Element): boolean;
+    private static _nodeSimilar;
     private static _nodeDiff;
     renderDebounce(): void;
     destroy(): void;
