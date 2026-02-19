@@ -9,6 +9,9 @@
 
 **Short-sightedness by design.** A lightweight, template-engine-agnostic alternative to Vue for building reactive components, with some code ripped from [ReefJS](https://github.com/cferdinandi/reef).
 
+[![License](https://img.shields.io/github/license/stefanobalocco/myopie.js)](https://github.com/StefanoBalocco/myopie.js/blob/main/LICENSE.md)
+![GZipped size](https://img.badgesize.io/stefanobalocco/myopie.js/main/myopie.min.js?compression=gzip)
+
 ---
 
 ## Features
