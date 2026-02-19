@@ -1,183 +1,46 @@
 # Myopie
 > French for Myopia
-> 
+>
 > Noun
 > - the quality of being short-sighted
 > - lack of foresight.
 
-I thought would be a perfect name for a skinned, simplified, alternative to Vue (with some code ripped from [ReefJS](https://github.com/cferdinandi/reef)).
+---
+
+**Short-sightedness by design.** A lightweight, template-engine-agnostic alternative to Vue for building reactive components, with some code ripped from [ReefJS](https://github.com/cferdinandi/reef).
 
 ---
 
 ## Features
 
-- **Component-based rendering**: Build dynamic UIs with a minimalistic approach.
-- **Data binding**: Two-way binding for form inputs and data.
-- **Efficient DOM diffing**: Only updates changed parts of the DOM.
-- **Lifecycle hooks**: Customize initialization and rendering.
-- **Lightweight**: Minimal overhead for small to medium-sized projects.
-- **Template engine agnostic**: compatible with any generic template engine.
+- **Component-based rendering** — Build dynamic UIs with a minimal API.
+- **Two-way data binding** — Sync form inputs to state automatically.
+- **Efficient DOM diffing** — Updates only what changed.
+- **Lifecycle hooks** — Run custom logic before and after init or render.
+- **Template engine agnostic** — Works with any function that returns an HTML string.
+- **Lightweight** — No dependencies. 2.4kb compressed.
 
 ---
 
-## Usage
+## Installation
 
-In browser:
+**Browser:**
 
 ```html
 <script type="module">
 import Myopie from 'https://cdn.jsdelivr.net/gh/StefanoBalocco/myopie.js/myopie.min.js';
-...
 </script>
 ```
 
-In node:
+**Node:**
 
 ```javascript
 import Myopie from 'myopie.js';
-...
 ```
 
 ---
 
 ## Quick Start
-
-### Creating a Myopie Instance
-
-#### `new Myopie(document, target, renderFunction, initialState = {}, bindings = [], debounce = 1000, renderOnInput = true)`
-
-You can create a Myopie instance by calling its constructor:
-
-```javascript
-const myopie = new Myopie(
-    '#app', // Target selector
-    (data) => `<div>Hello, ${data.name}!</div>`, // Render function
-    { name: 'World' }, // Initial state
-    [['input', 'name']], // Input bindings
-    500 // Debounce time in milliseconds,
-	true
-);
-```
-
-- **`target`** (string): Selector for the root element.
-- **`renderFunction`** (function): Function returning the HTML string to render.
-- **`initialState`** (object): Initial state data.
-- **`bindings`** (array): List of input bindings in the format `[selector, path]`.
-- **`debounce`** (number): Debounce time in milliseconds for updates.
-- **`renderOnInput`** (boolean): when an binded input changes, do a render
-
-### Methods
-
-#### `render()`
-
-Manually triggers the rendering of the DOM.
-Return false if the target selector is missing, true otherwise.
-
-```javascript
-myopie.render();
-```
-
-#### `renderDebounce()`
-
-If debounce is greater than zero, set a timer for the next render; otherwise call the render.
-
-```javascript
-myopie.renderDebounce();
-```
-
-#### `destroy()`
-
-Removes all event listeners (input bindings and permanent handlers) and clears timers.
-
-```javascript
-myopie.destroy();
-```
-
-#### `get(path)`
-
-Gets the value of a property from the state.
-- **`path`** (string): Slash-separated path to the property.
-
-```javascript
-const name = myopie.get('name');
-```
-
-#### `set(path, value, render = true)`
-
-Sets a property in the state and optionally triggers a re-render.
-- **`path`** (string): Slash-separated path to the property.
-- **`value`**: New value to set.
-- **`render`** (boolean): Whether to trigger a render after setting.
-
-
-```javascript
-myopie.set('name', 'World');
-```
-
-#### `handlersPermanentAdd(selector, event, listener)`
-
-Register a permanent event listener for elements matching selector. Returns false if an identical listener was already added.
-
-```javascript
-const handler = (e) => { myopie.set( 'name', 'Foo' ) };
-myopie.handlersPermanentAdd('input[name="foo"]', 'click', handler );
-```
-
-#### `handlersPermanentDel(selector, event?, listener?)`
-
-Remove permanent handlers. If event and optionally also the listener provided, removes matching ones; otherwise clears all for that selector.
-
-```javascript
-myopie.handlersPermanentDel('input[name="foo"]', 'click', handler );
-myopie.handlersPermanentDel('input[name="foo"]', 'click' );
-myopie.handlersPermanentDel('input[name="foo"]' );
-```
-
-### Lifecycle Hooks
-
-Myopie provides several lifecycle hooks that allow you to inject custom behavior at specific points during the component's initialization and rendering process. These hooks are executed with specific parameters based on the type of hook.
-
-#### `hooksInitAddPre( hookFunction )`
-
-Executed before the component is rendered the first time. Receives the current state data as a parameter.
-
-```javascript
-myopie.HooksInitAddPre((dataCurrent) => {
-console.log('This runs before initialization.', dataCurrent);
-});
-```
-
-#### `hooksInitAddPost( hookFunction )`
-
-Executed after the component is rendered the first time. Receives the current state data as a parameter.
-
-```javascript
-myopie.HooksInitAddPost((dataCurrent) => {
-  console.log('This runs after initialization.', dataCurrent);
-});
-```
-
-#### `hooksRenderAddPre( hookFunction )`
-
-Executed before the component renders after the first time. Receives the current and previous state data arrays as parameters.
-
-```javascript
-myopie.HooksRenderAddPre((dataCurrent, dataPrevious) => {
-  console.log('This runs before rendering.', dataCurrent, dataPrevious);
-});
-```
-
-#### `hooksRenderAddPost( hookFunction )`
-
-Executed after the component renders after the first time. Receives the current and previous state data arrays as parameters.
-
-```javascript
-myopie.HooksRenderAddPost((dataCurrent, dataPrevious) => {
-  console.log('This runs after rendering.', dataCurrent, dataPrevious);
-});
-```
-
-### Example
 
 ```html
 <div id="app"></div>
@@ -187,24 +50,132 @@ myopie.HooksRenderAddPost((dataCurrent, dataPrevious) => {
   const myopie = new Myopie(
     '#app',
     (data) => `<div>
-                 <input type="text" value="${data.name}" />
-                 <p>Hello, ${data.name}!</p>
-               </div>`,
+      <input type="text" value="${data.name}" />
+      <p>Hello, ${data.name}!</p>
+    </div>`,
     { name: 'World' },
     [['input', 'name']]
   );
 
-  // Update the name dynamically
   setTimeout(() => myopie.set('name', 'User'), 2000);
 </script>
 ```
 
+---
+
+## API
+
+### Constructor
+
+```javascript
+new Myopie(selector, template, initialData, inputToPath, timeout, renderOnInput)
+```
+
+- **`selector`** (string) — CSS selector for the root element.
+- **`template`** (function) — Function `(data) => string` that returns the HTML to render.
+- **`initialData`** (object, default `{}`) — Initial state.
+- **`inputToPath`** (array, default `[]`) — Input bindings: `[selector, path]` pairs.
+- **`timeout`** (number, default `100`) — Debounce delay in milliseconds.
+- **`renderOnInput`** (boolean, default `true`) — Re-render when a bound input changes.
+
+---
+
+### Methods
+
+#### `render()`
+
+Renders the DOM immediately. Returns `false` if the target element is missing, `true` otherwise.
+
+```javascript
+myopie.render();
+```
+
+#### `renderDebounce()`
+
+Schedules a render after the debounce delay. Calls `render()` directly if `timeout` is zero.
+
+```javascript
+myopie.renderDebounce();
+```
+
+#### `destroy()`
+
+Removes all event listeners and clears pending timers. Call this when tearing down the component.
+
+```javascript
+myopie.destroy();
+```
+
+#### `get(path)`
+
+Returns the value at `path` in the current state. Use slash-separated paths for nested properties.
+
+```javascript
+const name = myopie.get('name');
+const age = myopie.get('user/age');
+```
+
+#### `set(path, value, render = true)`
+
+Sets a value at `path` in the state. Triggers a debounced re-render by default.
+
+- **`path`** (string) — Slash-separated path to the property.
+- **`value`** (any) — New value.
+- **`render`** (boolean, default `true`) — Trigger a re-render after setting.
+
+```javascript
+myopie.set('name', 'World');
+myopie.set('user/age', 30);
+```
+
+#### `handlersPermanentAdd(selector, event, listener)`
+
+Registers a persistent event listener for elements matching `selector`. The listener survives re-renders. Returns `false` if an identical listener is already registered.
+
+```javascript
+const handler = (e) => myopie.set('name', 'Foo');
+myopie.handlersPermanentAdd('input[name="foo"]', 'click', handler);
+```
+
+#### `handlersPermanentDel(selector, event?, listener?)`
+
+Removes persistent listeners for `selector`. Pass `event` to remove only matching events; pass `listener` to remove a specific function. Omit both to clear all listeners for that selector.
+
+```javascript
+myopie.handlersPermanentDel('input[name="foo"]', 'click', handler); // remove one listener
+myopie.handlersPermanentDel('input[name="foo"]', 'click');          // remove by event
+myopie.handlersPermanentDel('input[name="foo"]');                   // remove all
+```
+
+---
+
+### Lifecycle Hooks
+
+Hooks run at specific points during initialization and rendering.
+
+- **`hooksInitAddPre(fn)`** — Before first render. Receives `(dataCurrent)`.
+- **`hooksInitAddPost(fn)`** — After first render. Receives `(dataCurrent)`.
+- **`hooksRenderAddPre(fn)`** — Before each subsequent render. Receives `(dataCurrent, dataPrevious)`.
+- **`hooksRenderAddPost(fn)`** — After each subsequent render. Receives `(dataCurrent, dataPrevious)`.
+
+```javascript
+myopie.hooksInitAddPre((data) => {
+  console.log('Before first render', data);
+});
+
+myopie.hooksRenderAddPost((current, previous) => {
+  console.log('Rendered. Previous state:', previous);
+});
+```
+
+---
+
 ## Contributing
 
-Contributions are welcome! Please submit issues or pull requests on the GitHub repository.
+Open an issue or submit a pull request on GitHub.
 
 ---
 
 ## License
 
-Myopie is released under the BSD-3-Clause License.
+Released under the BSD-3-Clause License.
