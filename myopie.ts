@@ -32,37 +32,37 @@ export default class Myopie {
 	private static readonly _regexpPathSplit: RegExp = /(?<!(?<!\\)\\)\//;
 	private static readonly _comparators: Record<string, ( node1: HTMLElement, node2: HTMLElement ) => boolean> = {
 		input: ( node1: HTMLElement, node2: HTMLElement ): boolean => {
-			const tmpItem1 = node1 as HTMLInputElement;
-			const tmpItem2 = node2 as HTMLInputElement;
+			const tmpItem1: HTMLInputElement = node1 as HTMLInputElement;
+			const tmpItem2: HTMLInputElement = node2 as HTMLInputElement;
 			return (
 				( tmpItem1.type === tmpItem2.type ) &&
 				( tmpItem1.name === tmpItem2.name )
 			);
 		},
 		img: ( node1: HTMLElement, node2: HTMLElement ): boolean => {
-			const tmpItem1 = node1 as HTMLImageElement;
-			const tmpItem2 = node2 as HTMLImageElement;
+			const tmpItem1: HTMLImageElement = node1 as HTMLImageElement;
+			const tmpItem2: HTMLImageElement = node2 as HTMLImageElement;
 			return (
 				!!tmpItem1.src && ( tmpItem1.src === tmpItem2.src )
 			);
 		},
 		script: ( node1: HTMLElement, node2: HTMLElement ): boolean => {
-			const tmpItem1 = node1 as HTMLScriptElement;
-			const tmpItem2 = node2 as HTMLScriptElement;
+			const tmpItem1: HTMLScriptElement = node1 as HTMLScriptElement;
+			const tmpItem2: HTMLScriptElement = node2 as HTMLScriptElement;
 			return (
 				!!tmpItem1.src && ( tmpItem1.src === tmpItem2.src )
 			);
 		},
 		a: ( node1: HTMLElement, node2: HTMLElement ): boolean => {
-			const tmpItem1 = node1 as HTMLAnchorElement;
-			const tmpItem2 = node2 as HTMLAnchorElement;
+			const tmpItem1: HTMLAnchorElement = node1 as HTMLAnchorElement;
+			const tmpItem2: HTMLAnchorElement = node2 as HTMLAnchorElement;
 			return (
 				!!tmpItem1.href && ( tmpItem1.href === tmpItem2.href )
 			);
 		},
 		link: ( node1: HTMLElement, node2: HTMLElement ): boolean => {
-			const tmpItem1 = node1 as HTMLLinkElement;
-			const tmpItem2 = node2 as HTMLLinkElement;
+			const tmpItem1: HTMLLinkElement = node1 as HTMLLinkElement;
+			const tmpItem2: HTMLLinkElement = node2 as HTMLLinkElement;
 			return (
 				!!tmpItem1.href && ( tmpItem1.href === tmpItem2.href )
 			);
@@ -70,8 +70,8 @@ export default class Myopie {
 	};
 	private static readonly _extractors: Record<string, ( element: HTMLElement ) => any> = {
 		input: ( element: HTMLElement ): Undefinedable<string | boolean> => {
-			const input = element as HTMLInputElement;
-			let returnValue;
+			const input: HTMLInputElement = element as HTMLInputElement;
+			let returnValue: Undefinedable<string>;
 			switch( input.type ) {
 				case 'checkbox':
 				case 'radio': {
@@ -303,22 +303,25 @@ export default class Myopie {
 							//attributes
 							const attributesTemplate: NamedNodeMap = tmpItem.attributes;
 							const attributesExistings: NamedNodeMap = currentItem.attributes;
+							const addedDefault: string[] = [];
 							if( 'true' === attributesTemplate.getNamedItem( 'data-myopie-ignore-content' )?.value ) {
 								ignore.content = true;
 							}
 							if( 'true' === attributesTemplate.getNamedItem( 'data-myopie-ignore-style' )?.value ) {
 								ignore.style = true;
 							}
-							let addedDefault: string[] = [];
 							for( let { name, value } of attributesTemplate ) {
 								if( name.startsWith( 'data-myopie-default-' ) && ( 20 < name.length ) ) {
-									const realName = name.substring( 20 );
+									const realName: string = name.substring( 20 );
 									if( null === attributesExistings.getNamedItem( realName ) ) {
 										addedDefault.push( realName );
 										currentItem.setAttribute( realName, value );
 									}
 								} else if( !name.startsWith( 'data-myopie-' ) ) {
-									if( ( ( !ignore?.style || 'style' != name ) && ( ( ![ 'input', 'option', 'textarea' ].includes( currentItem.tagName ) ) || ( ![ 'value', 'selected', 'checked' ].includes( name ) ) ) ) || ( null === attributesExistings.getNamedItem( name ) ) ) {
+									const protectedStyle: Undefinedable<boolean> = ignore?.style && ( 'style' === name );
+									const protectedAttribute: boolean = ( [ 'input', 'option', 'textarea' ].includes( currentItem.tagName ) && [ 'value', 'selected', 'checked' ].includes( name ) );
+									const existingAttribute: Nullable<Attr> = attributesExistings.getNamedItem( name );
+									if( ( ( existingAttribute?.value !== value ) && !protectedStyle && !protectedAttribute ) || ( null === existingAttribute ) ) {
 										currentItem.setAttribute( name, value );
 									}
 								}
@@ -426,7 +429,7 @@ export default class Myopie {
 	}
 
 	public render(): boolean {
-		let returnValue = true;
+		let returnValue: boolean = true;
 		clearTimeout( this._timer );
 		this._timer = undefined;
 		const htmlExisting: Nullable<HTMLElement> = Myopie._document.querySelector<HTMLElement>( this._selector );

@@ -259,13 +259,13 @@ export default class Myopie {
                         if (Myopie._nodeTypeElement === tmpItem.nodeType) {
                             const attributesTemplate = tmpItem.attributes;
                             const attributesExistings = currentItem.attributes;
+                            const addedDefault = [];
                             if ('true' === attributesTemplate.getNamedItem('data-myopie-ignore-content')?.value) {
                                 ignore.content = true;
                             }
                             if ('true' === attributesTemplate.getNamedItem('data-myopie-ignore-style')?.value) {
                                 ignore.style = true;
                             }
-                            let addedDefault = [];
                             for (let { name, value } of attributesTemplate) {
                                 if (name.startsWith('data-myopie-default-') && (20 < name.length)) {
                                     const realName = name.substring(20);
@@ -275,7 +275,10 @@ export default class Myopie {
                                     }
                                 }
                                 else if (!name.startsWith('data-myopie-')) {
-                                    if (((!ignore?.style || 'style' != name) && ((!['input', 'option', 'textarea'].includes(currentItem.tagName)) || (!['value', 'selected', 'checked'].includes(name)))) || (null === attributesExistings.getNamedItem(name))) {
+                                    const protectedStyle = ignore?.style && ('style' === name);
+                                    const protectedAttribute = (['input', 'option', 'textarea'].includes(currentItem.tagName) && ['value', 'selected', 'checked'].includes(name));
+                                    const existingAttribute = attributesExistings.getNamedItem(name);
+                                    if (((existingAttribute?.value !== value) && !protectedStyle && !protectedAttribute) || (null === existingAttribute)) {
                                         currentItem.setAttribute(name, value);
                                     }
                                 }
