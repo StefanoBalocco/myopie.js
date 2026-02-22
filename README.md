@@ -7,7 +7,7 @@
 
 ---
 
-**Short-sightedness by design.** A lightweight, template-engine-agnostic alternative to Vue for building reactive components, with some code ripped from [ReefJS](https://github.com/cferdinandi/reef).
+**Short-sightedness by design.** A lightweight, template-engine-agnostic alternative to Vue for building reactive components, with some code initially ripped from [ReefJS](https://github.com/cferdinandi/reef).
 
 [![License](https://img.shields.io/github/license/stefanobalocco/myopie.js)](https://github.com/StefanoBalocco/myopie.js/blob/main/LICENSE.md)
 ![GZipped size](https://img.badgesize.io/stefanobalocco/myopie.js/main/myopie.min.js?compression=gzip)
@@ -169,6 +169,44 @@ myopie.hooksInitAddPre((data) => {
 myopie.hooksRenderAddPost((current, previous) => {
   console.log('Rendered. Previous state:', previous);
 });
+```
+
+---
+
+### `data-myopie-*` Attributes
+
+Add these attributes to elements in your template to guide the DOM diffing algorithm. Myopie strips `data-myopie-default-*` and `data-myopie-ignore-*` attributes from the live DOM after each render.
+
+#### `data-myopie-id`
+
+Assigns a stable identity to an element. During diffing, sibling elements with the same `data-myopie-id` value match each other regardless of their position among siblings.
+
+```html
+<li data-myopie-id="item-42">...</li>
+```
+
+#### `data-myopie-ignore-content`
+
+Prevents the diffing algorithm from overwriting the element's inner content (and that of its descendants). Use this for elements managed by third-party libraries.
+
+```html
+<div data-myopie-ignore-content="true"><!-- managed externally --></div>
+```
+
+#### `data-myopie-ignore-style`
+
+Prevents the diffing algorithm from overwriting the `style` attribute on the element and its descendants. Use this when inline styles are set dynamically, for example by an animation library.
+
+```html
+<div data-myopie-ignore-style="true" style="transform: translateX(100px)">...</div>
+```
+
+#### `data-myopie-default-*`
+
+Sets an attribute only when that attribute is absent from the live element. The attribute name follows the prefix: `data-myopie-default-placeholder` sets `placeholder`.
+
+```html
+<input data-myopie-default-placeholder="Type here…" />
 ```
 
 ---

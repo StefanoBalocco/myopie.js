@@ -719,3 +719,76 @@ let prefix;
         t.false(clonedMap.has('key2'));
     });
 }
+{
+    prefix = 'data-myopie-id';
+    test(prefix + ': should be preserved in DOM after render', (t) => {
+        document.body.innerHTML = '<div id="container"></div>';
+        const template = (_data) => '<div data-myopie-id="item-1">content</div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const div = document.querySelector('#container div');
+        t.is(div?.getAttribute('data-myopie-id'), 'item-1');
+    });
+    test(prefix + ': should be updated when template value changes on rerender', (t) => {
+        document.body.innerHTML = '<div id="container"></div>';
+        const template = (data) => `<div data-myopie-id="${data.id}">content</div>`;
+        const myopie = new Myopie('#container', template, { id: 'v1' });
+        myopie.render();
+        myopie.set('id', 'v2', false);
+        myopie.render();
+        const div = document.querySelector('#container div');
+        t.is(div?.getAttribute('data-myopie-id'), 'v2');
+    });
+}
+{
+    prefix = 'data-myopie-default-* stripping';
+    test(prefix + ': attribute itself should be stripped from DOM after render', (t) => {
+        document.body.innerHTML = '<div id="container"></div>';
+        const template = (_data) => '<div data-myopie-default-class="foo">content</div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const div = document.querySelector('#container div');
+        t.is(div?.getAttribute('data-myopie-default-class'), null);
+    });
+}
+{
+    prefix = 'data-myopie-ignore-* stripping';
+    test(prefix + ': attribute itself should be stripped from DOM after render', (t) => {
+        document.body.innerHTML = '<div id="container"></div>';
+        const template = (_data) => '<div data-myopie-ignore-style="true">content</div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const div = document.querySelector('#container div');
+        t.is(div?.getAttribute('data-myopie-ignore-style'), null);
+    });
+}
+{
+    prefix = 'node scoring';
+    test(prefix + ': should select best matching node by element id over first candidate', (t) => {
+        document.body.innerHTML = '<div id="container"><div>generic</div><div id="target">correct</div></div>';
+        const template = (_data) => '<div id="target">correct</div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const divs = document.querySelectorAll('#container div');
+        t.is(divs.length, 1);
+        t.is(divs[0].id, 'target');
+    });
+    test(prefix + ': should select best matching node by data-myopie-id over first candidate', (t) => {
+        document.body.innerHTML = '<div id="container"><div>generic</div><div data-myopie-id="target">correct</div></div>';
+        const template = (_data) => '<div data-myopie-id="target">correct</div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const divs = document.querySelectorAll('#container div');
+        t.is(divs.length, 1);
+        t.is(divs[0]?.getAttribute('data-myopie-id'), 'target');
+    });
+    test(prefix + ': should update content of matched node when template changes', (t) => {
+        document.body.innerHTML = '<div id="container"><div>generic</div><div data-myopie-id="target">old</div></div>';
+        const template = (_data) => '<div data-myopie-id="target">updated</div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const div = document.querySelector('#container div');
+        t.is(div?.textContent, 'updated');
+        t.is(div?.getAttribute('data-myopie-id'), 'target');
+    });
+}

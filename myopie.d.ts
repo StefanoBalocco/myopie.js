@@ -7,6 +7,7 @@ export default class Myopie {
     private static readonly _objectToString;
     private static readonly _nodeTypeElement;
     private static readonly _nodeTypeText;
+    private static readonly _nodeTypeComment;
     private static readonly _regexpPathSplit;
     private static readonly _comparators;
     private static readonly _extractors;
@@ -29,7 +30,7 @@ export default class Myopie {
     private static _removeEventListeners;
     private static _attributesFilter;
     private static _attributesMap;
-    private static _nodeSimilar;
+    private static _nodeSimilartyCoefficient;
     private static _nodeDiff;
     renderDebounce(): void;
     destroy(): void;
