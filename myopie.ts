@@ -1,9 +1,5 @@
 'use strict';
 
-/*
- * Originally partially ripped from https://github.com/cferdinandi/reef/
- */
-
 type Undefinedable<T> = T | undefined;
 type Nullable<T> = T | null;
 type TemplateEngine = ( data: any ) => string;
@@ -29,15 +25,19 @@ export default class Myopie {
 	private static readonly _objectToString: ( this: any ) => string = Object.prototype.toString;
 	private static readonly _nodeTypeElement: number = Node.ELEMENT_NODE;
 	private static readonly _nodeTypeText: number = Node.TEXT_NODE;
-	private static readonly _nodeTypeComment: number = Node.COMMENT_NODE;
 	private static readonly _regexpPathSplit: RegExp = /(?<!(?<!\\)\\)\//;
+	private static readonly _regexpMyopieDefaultOrIgnore: RegExp = /^data-myopie-(?:default|ignore)-/;
+	private static readonly _regexpMyopieDefault: RegExp = /^data-myopie-default-.+/;
 	private static readonly _comparators: Record<string, ( node1: HTMLElement, node2: HTMLElement ) => boolean> = {
 		input: ( node1: HTMLElement, node2: HTMLElement ): boolean => {
 			const tmpItem1: HTMLInputElement = node1 as HTMLInputElement;
 			const tmpItem2: HTMLInputElement = node2 as HTMLInputElement;
 			return (
+				!!tmpItem1.type &&
 				( tmpItem1.type === tmpItem2.type ) &&
-				( tmpItem1.name === tmpItem2.name )
+				!!tmpItem1.name &&
+				( tmpItem1.name === tmpItem2.name ) &&
+				!tmpItem1.name.endsWith( '[]' )
 			);
 		},
 		img: ( node1: HTMLElement, node2: HTMLElement ): boolean => {
@@ -244,59 +244,48 @@ export default class Myopie {
 		let returnValue: number = 0;
 		if( node1.isEqualNode( node2 ) ) {
 			returnValue |= 1 << 30;
-		} else {
+		} else if( Myopie._nodeTypeElement === node1.nodeType ) {
 			if( node1.nodeType === node2.nodeType ) {
-				switch( node1.nodeType ) {
-					case Myopie._nodeTypeText:
-					case Myopie._nodeTypeComment: {
-						if( node1.nodeValue === node2.nodeValue ) {
-							returnValue |= 1 << 29;
-						}
-						break;
-					}
-					case Myopie._nodeTypeElement: {
-						if( node1.tagName === node2.tagName ) {
-							if( node1.id === node2.id ) {
-								if( node1.attributes.getNamedItem( 'data-myopie-id' ) && ( node1.attributes.getNamedItem( 'data-myopie-id' )!.value === node2.attributes.getNamedItem( 'data-myopie-id' )?.value ) ) {
-									returnValue |= 1 << 28;
-								}
-								if( node1.id ) {
-									returnValue |= 1 << 27;
-								}
+				if( node1.tagName === node2.tagName ) {
+					if( node1.id === node2.id ) {
+						if( node1.attributes.getNamedItem( 'data-myopie-id' )?.value === node2.attributes.getNamedItem( 'data-myopie-id' )?.value ) {
+							if( node1.attributes.getNamedItem( 'data-myopie-id' )?.value ) {
+								returnValue |= 1 << 28;
+							}
+							if( node1.id ) {
+								returnValue |= 1 << 27;
+							}
+							if( node1.innerHTML === node2.innerHTML ) {
+								returnValue |= 1 << 26;
+							}
 
-								if( node1.innerHTML === node2.innerHTML ) {
-									returnValue |= 1 << 26;
-								}
+							const tagName: string = node1.tagName.toLowerCase();
+							if( tagName && Myopie._comparators[ tagName ] && Myopie._comparators[ tagName ]( node1 as HTMLElement, node2 as HTMLElement ) ) {
+								returnValue |= 1 << 25;
+							}
 
-								const tagName: string = node1.tagName.toLowerCase();
-								if( tagName && Myopie._comparators[ tagName ] && Myopie._comparators[ tagName ]( node1 as HTMLElement, node2 as HTMLElement ) ) {
-									returnValue |= 1 << 25;
-								}
-
-								const attributes1: Attr[] = Array.from( node1.attributes ).filter( Myopie._attributesFilter );
-								const attributes2: Attr[] = Array.from( node2.attributes ).filter( Myopie._attributesFilter );
-								if( attributes1.length === attributes2.length ) {
-									const tmpValue1: string = attributes1.map( Myopie._attributesMap ).sort().join( String.fromCharCode( 0 ) );
-									const tmpValue2: string = attributes2.map( Myopie._attributesMap ).sort().join( String.fromCharCode( 0 ) );
-									if( tmpValue1 === tmpValue2 ) {
-										returnValue |= 1 << 24;
-									}
-								}
-
-								if( node1.classList.length && node2.classList.length ) {
-									const cls1 = Array.from( node1.classList ).sort().join( ' ' );
-									const cls2 = Array.from( node2.classList ).sort().join( ' ' );
-									if( cls1 === cls2 ) {
-										returnValue |= 1 << 23;
-									}
-								}
-
-								if( node1.childElementCount === node2.childElementCount ) {
-									returnValue |= 1 << 22;
+							const attributes1: Attr[] = Array.from( node1.attributes ).filter( Myopie._attributesFilter );
+							const attributes2: Attr[] = Array.from( node2.attributes ).filter( Myopie._attributesFilter );
+							if( attributes1.length === attributes2.length ) {
+								const tmpValue1: string = attributes1.map( Myopie._attributesMap ).sort().join( String.fromCharCode( 0 ) );
+								const tmpValue2: string = attributes2.map( Myopie._attributesMap ).sort().join( String.fromCharCode( 0 ) );
+								if( tmpValue1 === tmpValue2 ) {
+									returnValue |= 1 << 24;
 								}
 							}
+
+							if( node1.classList.length && node2.classList.length ) {
+								const cls1 = Array.from( node1.classList ).sort().join( ' ' );
+								const cls2 = Array.from( node2.classList ).sort().join( ' ' );
+								if( cls1 === cls2 ) {
+									returnValue |= 1 << 23;
+								}
+							}
+
+							if( node1.childElementCount === node2.childElementCount ) {
+								returnValue |= 1 << 22;
+							}
 						}
-						break;
 					}
 				}
 			}
@@ -312,22 +301,18 @@ export default class Myopie {
 		for( let iL1: number = 0; iL1 < cL1; iL1++ ) {
 			const tmpItem: Element = nodesTemplate[ iL1 ] as Element;
 			if( [ Myopie._nodeTypeElement, Myopie._nodeTypeText ].includes( nodesTemplate[ iL1 ].nodeType ) ) {
-				if( nodesExisting.length <= iL1 ) {
+				if( !nodesExistingArray.length ) {
 					switch( tmpItem.nodeType ) {
+						case Myopie._nodeTypeText:
 						case Myopie._nodeTypeElement: {
 							nodeExisting.append( tmpItem.cloneNode( true ) );
-							break;
-						}
-						case Myopie._nodeTypeText: {
-							nodeExisting.append( tmpItem.nodeValue! );
 							break;
 						}
 					}
 				} else {
 					let element: Undefinedable<Element>;
 					let score: number = 0;
-					const candidates: ChildNode[] = nodesExistingArray.slice( iL1 );
-					candidates.find(
+					nodesExistingArray.find(
 						( candidate: ChildNode ): boolean => {
 							const value: number = Myopie._nodeSimilartyCoefficient( tmpItem, candidate as Element );
 							if( value > score ) {
@@ -337,14 +322,16 @@ export default class Myopie {
 							return ( score >= ( 1 << 25 ) );
 						}
 					);
-					if( !element ) {
+					if( element ) {
+						nodesExistingArray.splice( nodesExistingArray.indexOf( element ), 1 );
+					} else {
 						element = tmpItem.cloneNode( true ) as Element;
 					}
 					let currentItem: Element = nodesExisting[ iL1 ] as Element;
 					if( !currentItem.isEqualNode( element ) ) {
 						currentItem = nodeExisting.insertBefore<Element>(
 							element,
-							( ( iL1 < nodesExisting.length ) ? nodesExisting[ iL1 ] : null )
+							nodesExisting[ iL1 ]
 						);
 					}
 					if( !currentItem.isEqualNode( tmpItem ) ) {
@@ -365,15 +352,15 @@ export default class Myopie {
 								ignore.style = true;
 							}
 							for( let { name, value } of attributesTemplate ) {
-								if( name.startsWith( 'data-myopie-default-' ) && ( 20 < name.length ) ) {
+								if( Myopie._regexpMyopieDefault.test( name ) ) {
 									const realName: string = name.substring( 20 );
 									if( null === attributesExistings.getNamedItem( realName ) ) {
 										addedDefault.push( realName );
 										currentItem.setAttribute( realName, value );
 									}
-								} else if( !name.startsWith( 'data-myopie-default-' ) && !name.startsWith( 'data-myopie-ignore-' ) ) {
+								} else if( !Myopie._regexpMyopieDefaultOrIgnore.test( name ) ) {
 									const protectedStyle: Undefinedable<boolean> = ignore?.style && ( 'style' === name );
-									const protectedAttribute: boolean = ( [ 'input', 'option', 'textarea' ].includes( currentItem.tagName ) && [ 'value', 'selected', 'checked' ].includes( name ) );
+									const protectedAttribute: boolean = ( [ 'input', 'option', 'textarea' ].includes( currentItem.tagName.toLowerCase() ) && [ 'value', 'selected', 'checked' ].includes( name ) );
 									const existingAttribute: Nullable<Attr> = attributesExistings.getNamedItem( name );
 									if( ( ( existingAttribute?.value !== value ) && !protectedStyle && !protectedAttribute ) || ( null === existingAttribute ) ) {
 										currentItem.setAttribute( name, value );
@@ -388,12 +375,8 @@ export default class Myopie {
 								}
 							}
 							// content
-							if( !ignore.content ) {
-								if( !tmpItem.childNodes.length && currentItem.childNodes.length ) {
-									currentItem.innerHTML = '';
-								} else {
-									Myopie._nodeDiff( tmpItem, currentItem, { ...ignore } );
-								}
+							if( !ignore.content && tmpItem.childNodes.length ) {
+								Myopie._nodeDiff( tmpItem, currentItem, { ...ignore } );
 							}
 						}
 					}

@@ -136,6 +136,11 @@ let prefix;
         const myopie = new Myopie('#test', template, testData);
         t.is(myopie.get('undefinedValue'), undefined);
     });
+    test(prefix + ': should return undefined when navigating through a non-navigable type', (t) => {
+        const template = (_data) => '';
+        const myopie = new Myopie('#test', template, { value: 42 });
+        t.is(myopie.get('value/deeper'), undefined);
+    });
 }
 {
     prefix = 'set';
@@ -169,6 +174,24 @@ let prefix;
         t.true(myopie.set('map/key/nested', 'new', false));
         t.is(myopie.get('map/key/nested'), 'new');
     });
+    test(prefix + ': should create intermediate object when setting nested path through Array at non-existent index', (t) => {
+        const template = (_data) => '';
+        const myopie = new Myopie('#test', template, { items: [] });
+        t.true(myopie.set('items/0/name', 'test', false));
+        t.is(myopie.get('items/0/name'), 'test');
+    });
+    test(prefix + ': should create intermediate object when setting nested path through Map at non-existent key', (t) => {
+        const template = (_data) => '';
+        const myopie = new Myopie('#test', template, { mymap: new Map() });
+        t.true(myopie.set('mymap/newkey/value', 'test', false));
+        t.is(myopie.get('mymap/newkey/value'), 'test');
+    });
+    test(prefix + ': should return false when setting through a non-navigable intermediate type', (t) => {
+        const template = (_data) => '';
+        const myopie = new Myopie('#test', template, { value: 42 });
+        t.false(myopie.set('value/deeper/key', 'test', false));
+        t.is(myopie.get('value'), 42);
+    });
     test(prefix + ': should update existing value', (t) => {
         const template = (_data) => '';
         const myopie = new Myopie('#test', template, { key: 'old' });
@@ -185,6 +208,73 @@ let prefix;
         const template = (_data) => '';
         const myopie = new Myopie('#test', template, {});
         t.true(myopie.set('key', 'value', false));
+    });
+    test(prefix + ': should return true but not mark as changed when setting the same value', (t) => {
+        const template = (_data) => '';
+        const myopie = new Myopie('#test', template, { key: 'original' });
+        t.true(myopie.set('key', 'original', false));
+        t.is(myopie.get('key'), 'original');
+    });
+}
+{
+    prefix = 'deep clone';
+    test(prefix + ': should clone initial data to prevent external mutations', (t) => {
+        const template = (_data) => '';
+        const initialData = { value: 'original' };
+        const myopie = new Myopie('#test', template, initialData);
+        initialData.value = 'mutated';
+        t.is(myopie.get('value'), 'original');
+    });
+    test(prefix + ': should clone nested objects', (t) => {
+        const template = (_data) => '';
+        const initialData = { nested: { value: 'original' } };
+        const myopie = new Myopie('#test', template, initialData);
+        initialData.nested.value = 'mutated';
+        t.is(myopie.get('nested/value'), 'original');
+    });
+    test(prefix + ': should clone arrays', (t) => {
+        const template = (_data) => '';
+        const initialData = { arr: ['a', 'b', 'c'] };
+        const myopie = new Myopie('#test', template, initialData);
+        initialData.arr.push('d');
+        t.is(myopie.get('arr/3'), undefined);
+    });
+    test(prefix + ': should clone Date objects', (t) => {
+        const template = (_data) => '';
+        const date = new Date('2024-01-01');
+        const initialData = { date: date };
+        const myopie = new Myopie('#test', template, initialData);
+        date.setFullYear(2025);
+        const clonedDate = myopie.get('date');
+        t.is(clonedDate.getFullYear(), 2024);
+    });
+    test(prefix + ': should clone RegExp objects', (t) => {
+        const template = (_data) => '';
+        const regex = /test/gi;
+        const initialData = { regex: regex };
+        const myopie = new Myopie('#test', template, initialData);
+        const clonedRegex = myopie.get('regex');
+        t.is(clonedRegex.source, 'test');
+        t.is(clonedRegex.flags, 'gi');
+        t.not(clonedRegex, regex);
+    });
+    test(prefix + ': should clone Set objects', (t) => {
+        const template = (_data) => '';
+        const set = new Set(['a', 'b']);
+        const initialData = { set: set };
+        const myopie = new Myopie('#test', template, initialData);
+        set.add('c');
+        const clonedSet = myopie.get('set');
+        t.false(clonedSet.has('c'));
+    });
+    test(prefix + ': should clone Map objects', (t) => {
+        const template = (_data) => '';
+        const map = new Map([['key', 'value']]);
+        const initialData = { map: map };
+        const myopie = new Myopie('#test', template, initialData);
+        map.set('key2', 'value2');
+        const clonedMap = myopie.get('map');
+        t.false(clonedMap.has('key2'));
     });
 }
 {
@@ -528,6 +618,23 @@ let prefix;
         myopie.handlersPermanentAdd('button', 'mousedown', handler);
         t.true(myopie.handlersPermanentDel('button'));
     });
+    test(prefix + ': should remove only the specified handler when multiple exist for the same event', (t) => {
+        document.body.innerHTML = '<div id="container"></div>';
+        const template = (_data) => '<button>Click</button>';
+        const myopie = new Myopie('#container', template, {});
+        let count1 = 0;
+        let count2 = 0;
+        const handler1 = () => { count1++; };
+        const handler2 = () => { count2++; };
+        myopie.handlersPermanentAdd('button', 'click', handler1);
+        myopie.handlersPermanentAdd('button', 'click', handler2);
+        myopie.render();
+        t.true(myopie.handlersPermanentDel('button', 'click', handler1));
+        const button = document.querySelector('button');
+        button?.dispatchEvent(new window.Event('click'));
+        t.is(count1, 0);
+        t.is(count2, 1);
+    });
     test(prefix + ': should detach handler from DOM elements', (t) => {
         document.body.innerHTML = '<div id="container"></div>';
         const template = (_data) => '<button>Click</button>';
@@ -542,77 +649,6 @@ let prefix;
         const button = document.querySelector('button');
         button?.dispatchEvent(new window.Event('click'));
         t.false(clicked);
-    });
-}
-{
-    prefix = 'destroy';
-    test.serial(prefix + ': should clear pending render timeout', async (t) => {
-        document.body.innerHTML = '<div id="container"></div>';
-        const template = (data) => `<div>${data.content}</div>`;
-        const myopie = new Myopie('#container', template, { content: 'initial' }, [], 50);
-        myopie.render();
-        myopie.set('content', 'updated', false);
-        myopie.renderDebounce();
-        myopie.destroy();
-        await new Promise((resolve) => setTimeout(resolve, 60));
-        const container = document.querySelector('#container');
-        t.is(container?.textContent, 'initial');
-    });
-    test(prefix + ': should remove permanent handlers from DOM', (t) => {
-        document.body.innerHTML = '<div id="container"></div>';
-        const template = (_data) => '<button>Click</button>';
-        const myopie = new Myopie('#container', template, {});
-        let clicked = false;
-        const handler = () => {
-            clicked = true;
-        };
-        myopie.handlersPermanentAdd('button', 'click', handler);
-        myopie.render();
-        myopie.destroy();
-        const button = document.querySelector('button');
-        button?.dispatchEvent(new window.Event('click'));
-        t.false(clicked);
-    });
-}
-{
-    prefix = 'data-myopie-ignore-content';
-    test(prefix + ': should preserve element content when attribute is true', (t) => {
-        document.body.innerHTML = '<div id="container"><div data-myopie-ignore-content="true">preserved</div></div>';
-        const template = (_data) => '<div data-myopie-ignore-content="true">replaced</div>';
-        const myopie = new Myopie('#container', template, {});
-        myopie.render();
-        const div = document.querySelector('#container div');
-        t.is(div?.textContent, 'preserved');
-    });
-}
-{
-    prefix = 'data-myopie-ignore-style';
-    test(prefix + ': should preserve element style when attribute is true', (t) => {
-        document.body.innerHTML = '<div id="container"><div data-myopie-ignore-style="true" style="color: red;">content</div></div>';
-        const template = (_data) => '<div data-myopie-ignore-style="true" style="color: blue;">content</div>';
-        const myopie = new Myopie('#container', template, {});
-        myopie.render();
-        const div = document.querySelector('#container div');
-        t.is(div?.style.color, 'red');
-    });
-}
-{
-    prefix = 'data-myopie-default-*';
-    test(prefix + ': should set default attribute when not present', (t) => {
-        document.body.innerHTML = '<div id="container"><div>content</div></div>';
-        const template = (_data) => '<div data-myopie-default-class="default-class">content</div>';
-        const myopie = new Myopie('#container', template, {});
-        myopie.render();
-        const div = document.querySelector('#container div');
-        t.is(div?.getAttribute('class'), 'default-class');
-    });
-    test(prefix + ': should not override existing attribute', (t) => {
-        document.body.innerHTML = '<div id="container"><div class="existing">content</div></div>';
-        const template = (_data) => '<div data-myopie-default-class="default-class">content</div>';
-        const myopie = new Myopie('#container', template, {});
-        myopie.render();
-        const div = document.querySelector('#container div');
-        t.is(div?.getAttribute('class'), null);
     });
 }
 {
@@ -659,64 +695,101 @@ let prefix;
     });
 }
 {
-    prefix = 'deep clone';
-    test(prefix + ': should clone initial data to prevent external mutations', (t) => {
-        const template = (_data) => '';
-        const initialData = { value: 'original' };
-        const myopie = new Myopie('#test', template, initialData);
-        initialData.value = 'mutated';
-        t.is(myopie.get('value'), 'original');
+    prefix = 'destroy';
+    test.serial(prefix + ': should clear pending render timeout', async (t) => {
+        document.body.innerHTML = '<div id="container"></div>';
+        const template = (data) => `<div>${data.content}</div>`;
+        const myopie = new Myopie('#container', template, { content: 'initial' }, [], 50);
+        myopie.render();
+        myopie.set('content', 'updated', false);
+        myopie.renderDebounce();
+        myopie.destroy();
+        await new Promise((resolve) => setTimeout(resolve, 60));
+        const container = document.querySelector('#container');
+        t.is(container?.textContent, 'initial');
     });
-    test(prefix + ': should clone nested objects', (t) => {
-        const template = (_data) => '';
-        const initialData = { nested: { value: 'original' } };
-        const myopie = new Myopie('#test', template, initialData);
-        initialData.nested.value = 'mutated';
-        t.is(myopie.get('nested/value'), 'original');
+    test(prefix + ': should remove permanent handlers from DOM', (t) => {
+        document.body.innerHTML = '<div id="container"></div>';
+        const template = (_data) => '<button>Click</button>';
+        const myopie = new Myopie('#container', template, {});
+        let clicked = false;
+        const handler = () => {
+            clicked = true;
+        };
+        myopie.handlersPermanentAdd('button', 'click', handler);
+        myopie.render();
+        myopie.destroy();
+        const button = document.querySelector('button');
+        button?.dispatchEvent(new window.Event('click'));
+        t.false(clicked);
     });
-    test(prefix + ': should clone arrays', (t) => {
-        const template = (_data) => '';
-        const initialData = { arr: ['a', 'b', 'c'] };
-        const myopie = new Myopie('#test', template, initialData);
-        initialData.arr.push('d');
-        t.is(myopie.get('arr/3'), undefined);
+    test(prefix + ': should remove input event listener when inputToPath is set', (t) => {
+        document.body.innerHTML = '<div id="container"></div>';
+        const template = (_data) => '<input type="text" name="field">';
+        const myopie = new Myopie('#container', template, { val: '' }, [['input[name="field"]', 'val']], 0, false);
+        myopie.render();
+        myopie.destroy();
+        const input = document.querySelector('input[name="field"]');
+        input.value = 'typed';
+        input.dispatchEvent(new window.Event('input', { bubbles: true }));
+        t.is(myopie.get('val'), '');
     });
-    test(prefix + ': should clone Date objects', (t) => {
-        const template = (_data) => '';
-        const date = new Date('2024-01-01');
-        const initialData = { date: date };
-        const myopie = new Myopie('#test', template, initialData);
-        date.setFullYear(2025);
-        const clonedDate = myopie.get('date');
-        t.is(clonedDate.getFullYear(), 2024);
+}
+{
+    prefix = 'data-myopie-ignore-content';
+    test(prefix + ': should preserve element content when attribute is true', (t) => {
+        document.body.innerHTML = '<div id="container"><div data-myopie-ignore-content="true">preserved</div></div>';
+        const template = (_data) => '<div data-myopie-ignore-content="true">replaced</div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const div = document.querySelector('#container div');
+        t.is(div?.textContent, 'preserved');
     });
-    test(prefix + ': should clone RegExp objects', (t) => {
-        const template = (_data) => '';
-        const regex = /test/gi;
-        const initialData = { regex: regex };
-        const myopie = new Myopie('#test', template, initialData);
-        const clonedRegex = myopie.get('regex');
-        t.is(clonedRegex.source, 'test');
-        t.is(clonedRegex.flags, 'gi');
-        t.not(clonedRegex, regex);
+}
+{
+    prefix = 'data-myopie-ignore-style';
+    test(prefix + ': should preserve element style when attribute is true', (t) => {
+        document.body.innerHTML = '<div id="container"><div data-myopie-ignore-style="true" style="color: red;">content</div></div>';
+        const template = (_data) => '<div data-myopie-ignore-style="true" style="color: blue;">content</div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const div = document.querySelector('#container div');
+        t.is(div?.style.color, 'red');
     });
-    test(prefix + ': should clone Set objects', (t) => {
-        const template = (_data) => '';
-        const set = new Set(['a', 'b']);
-        const initialData = { set: set };
-        const myopie = new Myopie('#test', template, initialData);
-        set.add('c');
-        const clonedSet = myopie.get('set');
-        t.false(clonedSet.has('c'));
+    test(prefix + ': should not remove style attribute from existing element when template omits it', (t) => {
+        document.body.innerHTML = '<div id="container"><div data-myopie-ignore-style="true" style="color: red;">content</div></div>';
+        const template = (_data) => '<div data-myopie-ignore-style="true">content</div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const div = document.querySelector('#container div');
+        t.is(div?.style.color, 'red');
     });
-    test(prefix + ': should clone Map objects', (t) => {
-        const template = (_data) => '';
-        const map = new Map([['key', 'value']]);
-        const initialData = { map: map };
-        const myopie = new Myopie('#test', template, initialData);
-        map.set('key2', 'value2');
-        const clonedMap = myopie.get('map');
-        t.false(clonedMap.has('key2'));
+}
+{
+    prefix = 'data-myopie-default-*';
+    test(prefix + ': should set default attribute when not present', (t) => {
+        document.body.innerHTML = '<div id="container"><div>content</div></div>';
+        const template = (_data) => '<div data-myopie-default-class="default-class">content</div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const div = document.querySelector('#container div');
+        t.is(div?.getAttribute('class'), 'default-class');
+    });
+    test(prefix + ': should not override existing attribute', (t) => {
+        document.body.innerHTML = '<div id="container"><div class="existing">content</div></div>';
+        const template = (_data) => '<div data-myopie-default-class="default-class">content</div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const div = document.querySelector('#container div');
+        t.is(div?.getAttribute('class'), null);
+    });
+    test(prefix + ' stripping: attribute itself should be stripped from DOM after render', (t) => {
+        document.body.innerHTML = '<div id="container"></div>';
+        const template = (_data) => '<div data-myopie-default-class="foo">content</div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const div = document.querySelector('#container div');
+        t.is(div?.getAttribute('data-myopie-default-class'), null);
     });
 }
 {
@@ -738,17 +811,6 @@ let prefix;
         myopie.render();
         const div = document.querySelector('#container div');
         t.is(div?.getAttribute('data-myopie-id'), 'v2');
-    });
-}
-{
-    prefix = 'data-myopie-default-* stripping';
-    test(prefix + ': attribute itself should be stripped from DOM after render', (t) => {
-        document.body.innerHTML = '<div id="container"></div>';
-        const template = (_data) => '<div data-myopie-default-class="foo">content</div>';
-        const myopie = new Myopie('#container', template, {});
-        myopie.render();
-        const div = document.querySelector('#container div');
-        t.is(div?.getAttribute('data-myopie-default-class'), null);
     });
 }
 {
@@ -790,5 +852,143 @@ let prefix;
         const div = document.querySelector('#container div');
         t.is(div?.textContent, 'updated');
         t.is(div?.getAttribute('data-myopie-id'), 'target');
+    });
+}
+{
+    prefix = '_nodeDiff';
+    test(prefix + ': should append text node when existing has fewer nodes than template', (t) => {
+        document.body.innerHTML = '<div id="container"></div>';
+        const template = (data) => data.showText ? '<span>A</span>testo' : '<span>A</span>';
+        const myopie = new Myopie('#container', template, { showText: false });
+        myopie.render();
+        myopie.set('showText', true, false);
+        myopie.render();
+        t.is(document.querySelector('#container')?.textContent, 'Atesto');
+    });
+    test(prefix + ': should clear children of matched element when template element is empty', (t) => {
+        document.body.innerHTML = '<div id="container"><div id="target"><span>child content</span></div></div>';
+        const template = (_data) => '<div id="target"></div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const target = document.querySelector('#container #target');
+        t.is(target?.childNodes.length, 0);
+    });
+    test(prefix + ': should not overwrite value attribute of input/textarea/option during re-render', (t) => {
+        document.body.innerHTML = '<div id="container"><input type="text" value="old"></div>';
+        const template = (_data) => '<input type="text" value="new">';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const input = document.querySelector('#container input');
+        t.is(input?.getAttribute('value'), 'old');
+    });
+}
+{
+    prefix = 'html comments';
+    test(prefix + ': comment in existing DOM should be removed after render', (t) => {
+        document.body.innerHTML = '<div id="container"><!-- existing comment --><p>content</p></div>';
+        const template = (_data) => '<p>content</p>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const container = document.querySelector('#container');
+        const commentNodes = Array.from(container?.childNodes ?? []).filter((n) => n.nodeType === 8);
+        t.is(commentNodes.length, 0);
+        t.is(container?.querySelector('p')?.textContent, 'content');
+    });
+    test(prefix + ': comment generated by template should not appear in rendered DOM', (t) => {
+        document.body.innerHTML = '<div id="container"></div>';
+        const template = (_data) => '<!-- template comment --><p>content</p>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const container = document.querySelector('#container');
+        const commentNodes = Array.from(container?.childNodes ?? []).filter((n) => n.nodeType === 8);
+        t.is(commentNodes.length, 0);
+        t.is(container?.querySelector('p')?.textContent, 'content');
+    });
+}
+{
+    prefix = 'comparators: input';
+    test(prefix + ': should call input comparator to match elements by type and name', (t) => {
+        document.body.innerHTML = '<div id="container"><input type="text" name="username"></div>';
+        const template = (_data) => '<input type="text" name="username" data-matched="true">';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const input = document.querySelector('#container input');
+        t.is(input?.getAttribute('data-matched'), 'true');
+        t.is(input?.name, 'username');
+    });
+}
+{
+    prefix = 'comparators: link';
+    test(prefix + ': should call link comparator to match elements by href', (t) => {
+        document.body.innerHTML = '<div id="container"><link rel="stylesheet" href="http://localhost/style.css"></div>';
+        const template = (_data) => '<link rel="stylesheet" href="http://localhost/style.css" data-matched="true">';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const link = document.querySelector('#container link');
+        t.is(link?.getAttribute('data-matched'), 'true');
+        t.is(link?.href, 'http://localhost/style.css');
+    });
+}
+{
+    prefix = 'comparators: a';
+    test(prefix + ': should call anchor comparator to match elements by href', (t) => {
+        document.body.innerHTML = '<div id="container"><a href="http://localhost/other">Other</a><a href="http://localhost/target">Target</a></div>';
+        const template = (_data) => '<a href="http://localhost/target">Updated</a>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const anchors = document.querySelectorAll('#container a');
+        t.is(anchors.length, 1);
+        t.is(anchors[0].href, 'http://localhost/target');
+        t.is(anchors[0].textContent, 'Updated');
+    });
+}
+{
+    prefix = 'comparators: img';
+    test(prefix + ': should call img comparator to match elements by src', (t) => {
+        document.body.innerHTML = '<div id="container"><img src="http://localhost/image.png"></div>';
+        const template = (_data) => '<img src="http://localhost/image.png" alt="updated">';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const img = document.querySelector('#container img');
+        t.is(img?.getAttribute('alt'), 'updated');
+        t.is(img?.src, 'http://localhost/image.png');
+    });
+}
+{
+    prefix = 'comparators: script';
+    test(prefix + ': should call script comparator to match elements by src', (t) => {
+        document.body.innerHTML = '<div id="container"><script src="http://localhost/app.js"></script></div>';
+        const template = (_data) => '<script src="http://localhost/app.js" data-matched="true"></script>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const script = document.querySelector('#container script');
+        t.is(script?.getAttribute('data-matched'), 'true');
+        t.is(script?.src, 'http://localhost/app.js');
+    });
+}
+{
+    prefix = 'mixed template';
+    test(prefix + ': should correctly render and update a template mixing divs, spans, a, img, script, text and comments', (t) => {
+        document.body.innerHTML = '<div id="container"></div>';
+        const template = (data) => `<div class="wrapper"><span class="title">${data.title}</span><a href="http://localhost/page">Link</a><img src="http://localhost/photo.png" alt="${data.alt}"><script src="http://localhost/app.js"><\/script>some text<span class="footer">${data.footer}</span></div><!-- header -->`;
+        const myopie = new Myopie('#container', template, { title: 'Hello', alt: 'photo', footer: 'Bottom' });
+        myopie.render();
+        const wrapper = document.querySelector('#container .wrapper');
+        t.truthy(wrapper);
+        t.is(wrapper?.querySelector('.title')?.textContent, 'Hello');
+        t.is(wrapper?.querySelector('a')?.href, 'http://localhost/page');
+        t.is(wrapper?.querySelector('img')?.src, 'http://localhost/photo.png');
+        t.is(wrapper?.querySelector('img')?.alt, 'photo');
+        t.is(wrapper?.querySelector('script')?.src, 'http://localhost/app.js');
+        t.is(wrapper?.querySelector('.footer')?.textContent, 'Bottom');
+        const commentNodes = Array.from(document.querySelector('#container')?.childNodes ?? []).filter((n) => n.nodeType === 8);
+        t.is(commentNodes.length, 0);
+        myopie.set('title', 'World', false);
+        myopie.set('alt', 'new photo', false);
+        myopie.set('footer', 'Updated', false);
+        myopie.render();
+        t.is(wrapper?.querySelector('.title')?.textContent, 'World');
+        t.is(wrapper?.querySelector('img')?.alt, 'new photo');
+        t.is(wrapper?.querySelector('.footer')?.textContent, 'Updated');
     });
 }

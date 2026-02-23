@@ -4,14 +4,18 @@ export default class Myopie {
     static _objectToString = Object.prototype.toString;
     static _nodeTypeElement = Node.ELEMENT_NODE;
     static _nodeTypeText = Node.TEXT_NODE;
-    static _nodeTypeComment = Node.COMMENT_NODE;
     static _regexpPathSplit = /(?<!(?<!\\)\\)\//;
+    static _regexpMyopieDefaultOrIgnore = /^data-myopie-(?:default|ignore)-/;
+    static _regexpMyopieDefault = /^data-myopie-default-.+/;
     static _comparators = {
         input: (node1, node2) => {
             const tmpItem1 = node1;
             const tmpItem2 = node2;
-            return ((tmpItem1.type === tmpItem2.type) &&
-                (tmpItem1.name === tmpItem2.name));
+            return (!!tmpItem1.type &&
+                (tmpItem1.type === tmpItem2.type) &&
+                !!tmpItem1.name &&
+                (tmpItem1.name === tmpItem2.name) &&
+                !tmpItem1.name.endsWith('[]'));
         },
         img: (node1, node2) => {
             const tmpItem1 = node1;
@@ -202,54 +206,44 @@ export default class Myopie {
         if (node1.isEqualNode(node2)) {
             returnValue |= 1 << 30;
         }
-        else {
+        else if (Myopie._nodeTypeElement === node1.nodeType) {
             if (node1.nodeType === node2.nodeType) {
-                switch (node1.nodeType) {
-                    case Myopie._nodeTypeText:
-                    case Myopie._nodeTypeComment: {
-                        if (node1.nodeValue === node2.nodeValue) {
-                            returnValue |= 1 << 29;
-                        }
-                        break;
-                    }
-                    case Myopie._nodeTypeElement: {
-                        if (node1.tagName === node2.tagName) {
-                            if (node1.id === node2.id) {
-                                if (node1.attributes.getNamedItem('data-myopie-id') && (node1.attributes.getNamedItem('data-myopie-id').value === node2.attributes.getNamedItem('data-myopie-id')?.value)) {
-                                    returnValue |= 1 << 28;
-                                }
-                                if (node1.id) {
-                                    returnValue |= 1 << 27;
-                                }
-                                if (node1.innerHTML === node2.innerHTML) {
-                                    returnValue |= 1 << 26;
-                                }
-                                const tagName = node1.tagName.toLowerCase();
-                                if (tagName && Myopie._comparators[tagName] && Myopie._comparators[tagName](node1, node2)) {
-                                    returnValue |= 1 << 25;
-                                }
-                                const attributes1 = Array.from(node1.attributes).filter(Myopie._attributesFilter);
-                                const attributes2 = Array.from(node2.attributes).filter(Myopie._attributesFilter);
-                                if (attributes1.length === attributes2.length) {
-                                    const tmpValue1 = attributes1.map(Myopie._attributesMap).sort().join(String.fromCharCode(0));
-                                    const tmpValue2 = attributes2.map(Myopie._attributesMap).sort().join(String.fromCharCode(0));
-                                    if (tmpValue1 === tmpValue2) {
-                                        returnValue |= 1 << 24;
-                                    }
-                                }
-                                if (node1.classList.length && node2.classList.length) {
-                                    const cls1 = Array.from(node1.classList).sort().join(' ');
-                                    const cls2 = Array.from(node2.classList).sort().join(' ');
-                                    if (cls1 === cls2) {
-                                        returnValue |= 1 << 23;
-                                    }
-                                }
-                                if (node1.childElementCount === node2.childElementCount) {
-                                    returnValue |= 1 << 22;
+                if (node1.tagName === node2.tagName) {
+                    if (node1.id === node2.id) {
+                        if (node1.attributes.getNamedItem('data-myopie-id')?.value === node2.attributes.getNamedItem('data-myopie-id')?.value) {
+                            if (node1.attributes.getNamedItem('data-myopie-id')?.value) {
+                                returnValue |= 1 << 28;
+                            }
+                            if (node1.id) {
+                                returnValue |= 1 << 27;
+                            }
+                            if (node1.innerHTML === node2.innerHTML) {
+                                returnValue |= 1 << 26;
+                            }
+                            const tagName = node1.tagName.toLowerCase();
+                            if (tagName && Myopie._comparators[tagName] && Myopie._comparators[tagName](node1, node2)) {
+                                returnValue |= 1 << 25;
+                            }
+                            const attributes1 = Array.from(node1.attributes).filter(Myopie._attributesFilter);
+                            const attributes2 = Array.from(node2.attributes).filter(Myopie._attributesFilter);
+                            if (attributes1.length === attributes2.length) {
+                                const tmpValue1 = attributes1.map(Myopie._attributesMap).sort().join(String.fromCharCode(0));
+                                const tmpValue2 = attributes2.map(Myopie._attributesMap).sort().join(String.fromCharCode(0));
+                                if (tmpValue1 === tmpValue2) {
+                                    returnValue |= 1 << 24;
                                 }
                             }
+                            if (node1.classList.length && node2.classList.length) {
+                                const cls1 = Array.from(node1.classList).sort().join(' ');
+                                const cls2 = Array.from(node2.classList).sort().join(' ');
+                                if (cls1 === cls2) {
+                                    returnValue |= 1 << 23;
+                                }
+                            }
+                            if (node1.childElementCount === node2.childElementCount) {
+                                returnValue |= 1 << 22;
+                            }
                         }
-                        break;
                     }
                 }
             }
@@ -264,14 +258,11 @@ export default class Myopie {
         for (let iL1 = 0; iL1 < cL1; iL1++) {
             const tmpItem = nodesTemplate[iL1];
             if ([Myopie._nodeTypeElement, Myopie._nodeTypeText].includes(nodesTemplate[iL1].nodeType)) {
-                if (nodesExisting.length <= iL1) {
+                if (!nodesExistingArray.length) {
                     switch (tmpItem.nodeType) {
+                        case Myopie._nodeTypeText:
                         case Myopie._nodeTypeElement: {
                             nodeExisting.append(tmpItem.cloneNode(true));
-                            break;
-                        }
-                        case Myopie._nodeTypeText: {
-                            nodeExisting.append(tmpItem.nodeValue);
                             break;
                         }
                     }
@@ -279,8 +270,7 @@ export default class Myopie {
                 else {
                     let element;
                     let score = 0;
-                    const candidates = nodesExistingArray.slice(iL1);
-                    candidates.find((candidate) => {
+                    nodesExistingArray.find((candidate) => {
                         const value = Myopie._nodeSimilartyCoefficient(tmpItem, candidate);
                         if (value > score) {
                             score = value;
@@ -288,12 +278,15 @@ export default class Myopie {
                         }
                         return (score >= (1 << 25));
                     });
-                    if (!element) {
+                    if (element) {
+                        nodesExistingArray.splice(nodesExistingArray.indexOf(element), 1);
+                    }
+                    else {
                         element = tmpItem.cloneNode(true);
                     }
                     let currentItem = nodesExisting[iL1];
                     if (!currentItem.isEqualNode(element)) {
-                        currentItem = nodeExisting.insertBefore(element, ((iL1 < nodesExisting.length) ? nodesExisting[iL1] : null));
+                        currentItem = nodeExisting.insertBefore(element, nodesExisting[iL1]);
                     }
                     if (!currentItem.isEqualNode(tmpItem)) {
                         const templateContent = ((tmpItem.childNodes.length) ? null : tmpItem.textContent);
@@ -312,16 +305,16 @@ export default class Myopie {
                                 ignore.style = true;
                             }
                             for (let { name, value } of attributesTemplate) {
-                                if (name.startsWith('data-myopie-default-') && (20 < name.length)) {
+                                if (Myopie._regexpMyopieDefault.test(name)) {
                                     const realName = name.substring(20);
                                     if (null === attributesExistings.getNamedItem(realName)) {
                                         addedDefault.push(realName);
                                         currentItem.setAttribute(realName, value);
                                     }
                                 }
-                                else if (!name.startsWith('data-myopie-default-') && !name.startsWith('data-myopie-ignore-')) {
+                                else if (!Myopie._regexpMyopieDefaultOrIgnore.test(name)) {
                                     const protectedStyle = ignore?.style && ('style' === name);
-                                    const protectedAttribute = (['input', 'option', 'textarea'].includes(currentItem.tagName) && ['value', 'selected', 'checked'].includes(name));
+                                    const protectedAttribute = (['input', 'option', 'textarea'].includes(currentItem.tagName.toLowerCase()) && ['value', 'selected', 'checked'].includes(name));
                                     const existingAttribute = attributesExistings.getNamedItem(name);
                                     if (((existingAttribute?.value !== value) && !protectedStyle && !protectedAttribute) || (null === existingAttribute)) {
                                         currentItem.setAttribute(name, value);
@@ -335,13 +328,8 @@ export default class Myopie {
                                     }
                                 }
                             }
-                            if (!ignore.content) {
-                                if (!tmpItem.childNodes.length && currentItem.childNodes.length) {
-                                    currentItem.innerHTML = '';
-                                }
-                                else {
-                                    Myopie._nodeDiff(tmpItem, currentItem, { ...ignore });
-                                }
+                            if (!ignore.content && tmpItem.childNodes.length) {
+                                Myopie._nodeDiff(tmpItem, currentItem, { ...ignore });
                             }
                         }
                     }
