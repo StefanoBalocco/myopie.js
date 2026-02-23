@@ -745,6 +745,14 @@ let prefix;
         const div = document.querySelector('#container div');
         t.is(div?.textContent, 'preserved');
     });
+    test(prefix + ': should preserve existing text when template element is empty', (t) => {
+        document.body.innerHTML = '<div id="container"><div data-myopie-ignore-content="true">preserved</div></div>';
+        const template = (_data) => '<div data-myopie-ignore-content="true"></div>';
+        const myopie = new Myopie('#container', template, {});
+        myopie.render();
+        const div = document.querySelector('#container div');
+        t.is(div?.textContent, 'preserved');
+    });
 }
 {
     prefix = 'data-myopie-ignore-style';

@@ -248,8 +248,8 @@ export default class Myopie {
 			if( node1.nodeType === node2.nodeType ) {
 				if( node1.tagName === node2.tagName ) {
 					if( node1.id === node2.id ) {
-						if( node1.attributes.getNamedItem( 'data-myopie-id' )?.value === node2.attributes.getNamedItem( 'data-myopie-id' )?.value ) {
-							if( node1.attributes.getNamedItem( 'data-myopie-id' )?.value ) {
+						if( node1.getAttribute( 'data-myopie-id' ) === node2.getAttribute( 'data-myopie-id' ) ) {
+							if( node1.getAttribute( 'data-myopie-id' ) ) {
 								returnValue |= 1 << 28;
 							}
 							if( node1.id ) {
@@ -275,9 +275,9 @@ export default class Myopie {
 							}
 
 							if( node1.classList.length && node2.classList.length ) {
-								const cls1 = Array.from( node1.classList ).sort().join( ' ' );
-								const cls2 = Array.from( node2.classList ).sort().join( ' ' );
-								if( cls1 === cls2 ) {
+								const node1Classes: string = Array.from( node1.classList ).sort().join( ' ' );
+								const node2Classes: string = Array.from( node2.classList ).sort().join( ' ' );
+								if( node1Classes === node2Classes ) {
 									returnValue |= 1 << 23;
 								}
 							}
@@ -337,38 +337,37 @@ export default class Myopie {
 					if( !currentItem.isEqualNode( tmpItem ) ) {
 						const templateContent: Nullable<string> = ( ( tmpItem.childNodes.length ) ? null : tmpItem.textContent );
 						const existingContent: Nullable<string> = ( ( currentItem.childNodes.length ) ? null : currentItem.textContent );
-						if( templateContent != existingContent ) {
-							currentItem.textContent = templateContent;
-						}
 						if( Myopie._nodeTypeElement === tmpItem.nodeType ) {
-							//attributes
-							const attributesTemplate: NamedNodeMap = tmpItem.attributes;
-							const attributesExistings: NamedNodeMap = currentItem.attributes;
 							const addedDefault: string[] = [];
-							if( 'true' === attributesTemplate.getNamedItem( 'data-myopie-ignore-content' )?.value ) {
+							if( 'true' === tmpItem.getAttribute( 'data-myopie-ignore-content' ) ) {
 								ignore.content = true;
 							}
-							if( 'true' === attributesTemplate.getNamedItem( 'data-myopie-ignore-style' )?.value ) {
+							if( 'true' === tmpItem.getAttribute( 'data-myopie-ignore-style' ) ) {
 								ignore.style = true;
 							}
-							for( let { name, value } of attributesTemplate ) {
+							if( !ignore.content ) {
+								if( templateContent != existingContent ) {
+									currentItem.textContent = templateContent;
+								}
+							}
+							for( let { name, value } of tmpItem.attributes ) {
 								if( Myopie._regexpMyopieDefault.test( name ) ) {
 									const realName: string = name.substring( 20 );
-									if( null === attributesExistings.getNamedItem( realName ) ) {
+									if( null === currentItem.getAttribute( realName ) ) {
 										addedDefault.push( realName );
 										currentItem.setAttribute( realName, value );
 									}
 								} else if( !Myopie._regexpMyopieDefaultOrIgnore.test( name ) ) {
 									const protectedStyle: Undefinedable<boolean> = ignore?.style && ( 'style' === name );
 									const protectedAttribute: boolean = ( [ 'input', 'option', 'textarea' ].includes( currentItem.tagName.toLowerCase() ) && [ 'value', 'selected', 'checked' ].includes( name ) );
-									const existingAttribute: Nullable<Attr> = attributesExistings.getNamedItem( name );
-									if( ( ( existingAttribute?.value !== value ) && !protectedStyle && !protectedAttribute ) || ( null === existingAttribute ) ) {
+									const existingAttribute: Nullable<string> = currentItem.getAttribute( name );
+									if( ( ( existingAttribute !== value ) && !protectedStyle && !protectedAttribute ) || ( null === existingAttribute ) ) {
 										currentItem.setAttribute( name, value );
 									}
 								}
 							}
-							for( let { name } of attributesExistings ) {
-								if( null === attributesTemplate.getNamedItem( name ) && !addedDefault.includes( name ) ) {
+							for( let { name } of currentItem.attributes ) {
+								if( null === tmpItem.getAttribute( name ) && !addedDefault.includes( name ) ) {
 									if( !ignore?.style || ( name !== 'style' ) ) {
 										currentItem.removeAttribute( name );
 									}

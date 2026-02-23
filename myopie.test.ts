@@ -866,6 +866,17 @@ let prefix: string;
 		const div = document.querySelector( '#container div' );
 		t.is( div?.textContent, 'preserved' );
 	} );
+
+	test( prefix + ': should preserve existing text when template element is empty', ( t ) => {
+		// Bug scenario: templateContent="" (no children) vs existingContent=null (has text child).
+		// "" != null is true, so the old code cleared textContent before reading the ignore attribute.
+		document.body.innerHTML = '<div id="container"><div data-myopie-ignore-content="true">preserved</div></div>';
+		const template = ( _data: any ): string => '<div data-myopie-ignore-content="true"></div>';
+		const myopie = new Myopie( '#container', template, {} );
+		myopie.render();
+		const div = document.querySelector( '#container div' );
+		t.is( div?.textContent, 'preserved' );
+	} );
 }
 
 {
