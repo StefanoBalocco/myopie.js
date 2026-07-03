@@ -1,4 +1,3 @@
-'use strict';
 export default class Myopie {
     static _document = document;
     static _objectToString = Object.prototype.toString;
