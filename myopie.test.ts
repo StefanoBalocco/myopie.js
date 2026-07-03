@@ -1,5 +1,3 @@
-'use strict';
-
 import test from 'ava';
 import { JSDOM } from 'jsdom';
 
@@ -105,6 +103,12 @@ let prefix: string;
 		t.is( myopie.get( 'objectNested/level1/level2/value' ), 'deep' );
 	} );
 
+	test( prefix + ': should handle escaped slash in path', ( t ) => {
+		const template = ( _data: any ): string => '';
+		const myopie = new Myopie( '#test', template, { 'key/with/slash': 'value' } );
+		t.is( myopie.get( 'key\\/with\\/slash' ), 'value' );
+	} );
+
 	test( prefix + ': should return value from array by index', ( t ) => {
 		const template = ( _data: any ): string => '';
 		const myopie = new Myopie( '#test', template, testData );
@@ -117,10 +121,24 @@ let prefix: string;
 		t.is( myopie.get( 'mapValue/key1' ), 'value1' );
 	} );
 
-	test( prefix + ': should return value from Set by index', ( t ) => {
+	test( prefix + ': should return undefined when traversing into a Set by index', ( t ) => {
 		const template = ( _data: any ): string => '';
 		const myopie = new Myopie( '#test', template, testData );
-		t.is( myopie.get( 'setValue/0' ), 'item1' );
+		t.is( myopie.get( 'setValue/0' ), undefined );
+	} );
+
+	test( prefix + ': should return Set value for direct path', ( t ) => {
+		const template = ( _data: any ): string => '';
+		const myopie = new Myopie( '#test', template, testData );
+		const setValue: any = myopie.get( 'setValue' );
+		t.true( setValue instanceof Set );
+		t.is( setValue.size, 3 );
+	} );
+
+	test( prefix + ': should return undefined for deep path through a Set', ( t ) => {
+		const template = ( _data: any ): string => '';
+		const myopie = new Myopie( '#test', template, testData );
+		t.is( myopie.get( 'setValue/0/name' ), undefined );
 	} );
 
 	test( prefix + ': should return undefined for non-existent path', ( t ) => {
@@ -215,6 +233,35 @@ let prefix: string;
 		t.is( myopie.get( 'map/key/nested' ), 'new' );
 	} );
 
+	test( prefix + ': should set direct Map entry by key', ( t ) => {
+		const template = ( _data: any ): string => '';
+		const myopie = new Myopie( '#test', template, { map: new Map( [ [ 'key', 'old' ] ] ) } );
+		t.true( myopie.set( 'map/key', 'new', false ) );
+		t.is( myopie.get( 'map/key' ), 'new' );
+	} );
+
+	test( prefix + ': should not change Map entry when setting same value', ( t ) => {
+		const template = ( _data: any ): string => '';
+		const myopie = new Myopie( '#test', template, { map: new Map( [ [ 'key', 'old' ] ] ) } );
+		t.true( myopie.set( 'map/key', 'old', false ) );
+		t.is( myopie.get( 'map/key' ), 'old' );
+	} );
+
+	test( prefix + ': should delete direct Map entry when setting undefined', ( t ) => {
+		const template = ( _data: any ): string => '';
+		const myopie = new Myopie( '#test', template, { map: new Map( [ [ 'key', 'old' ] ] ) } );
+		t.true( myopie.set( 'map/key', undefined, false ) );
+		t.is( myopie.get( 'map/key' ), undefined );
+	} );
+
+	test( prefix + ': should not change Map when setting undefined on non-existent key', ( t ) => {
+		const template = ( _data: any ): string => '';
+		const myopie = new Myopie( '#test', template, { map: new Map( [ [ 'other', 'value' ] ] ) } );
+		t.true( myopie.set( 'map/missing', undefined, false ) );
+		t.is( myopie.get( 'map/missing' ), undefined );
+		t.is( myopie.get( 'map/other' ), 'value' );
+	} );
+
 	test( prefix + ': should create intermediate object when setting nested path through Array at non-existent index', ( t ) => {
 		const template = ( _data: any ): string => '';
 		const myopie = new Myopie( '#test', template, { items: [] } );
@@ -261,6 +308,59 @@ let prefix: string;
 		const myopie = new Myopie( '#test', template, { key: 'original' } );
 		t.true( myopie.set( 'key', 'original', false ) );
 		t.is( myopie.get( 'key' ), 'original' );
+	} );
+
+	test( prefix + ': should handle escaped slash in path', ( t ) => {
+		const template = ( _data: any ): string => '';
+		const myopie = new Myopie( '#test', template, { key: { with: { slash: 'nested' } } } );
+		t.true( myopie.set( 'key\\/with\\/slash', 'value', false ) );
+		t.is( myopie.get( 'key\\/with\\/slash' ), 'value' );
+		t.is( myopie.get( 'key/with/slash' ), 'nested' );
+	} );
+
+	test( prefix + ': should set a Set as a whole value', ( t ) => {
+		const template = ( _data: any ): string => '';
+		const myopie = new Myopie( '#test', template, { items: new Set( [ 'old' ] ) } );
+		t.true( myopie.set( 'items', new Set( [ 'new' ] ), false ) );
+		const setValue: any = myopie.get( 'items' );
+		t.true( setValue instanceof Set );
+		t.true( setValue.has( 'new' ) );
+		t.false( setValue.has( 'old' ) );
+	} );
+
+	test( prefix + ': should return false when setting direct Set item by index', ( t ) => {
+		const template = ( _data: any ): string => '';
+		const myopie = new Myopie( '#test', template, { items: new Set( [ 'a', 'b' ] ) } );
+		t.false( myopie.set( 'items/0', 'x', false ) );
+		const setValue: any = myopie.get( 'items' );
+		t.true( setValue instanceof Set );
+		t.true( setValue.has( 'a' ) );
+		t.true( setValue.has( 'b' ) );
+		t.is( setValue.size, 2 );
+		t.is( myopie.get( 'items/0' ), undefined );
+	} );
+
+	test( prefix + ': should return false when setting nested path through a Set', ( t ) => {
+		const template = ( _data: any ): string => '';
+		const myopie = new Myopie( '#test', template, { items: new Set( [ { name: 'old' } ] ) } );
+		t.false( myopie.set( 'items/0/name', 'new', false ) );
+		const setValue: any = myopie.get( 'items' );
+		const itemsArray: { name: string }[] = Array.from( setValue );
+		t.is( itemsArray[ 0 ].name, 'old' );
+	} );
+
+	test( prefix + ': should return false when setting property on Date value', ( t ) => {
+		const template = ( _data: any ): string => '';
+		const myopie = new Myopie( '#test', template, { date: new Date( '2026-01-01T00:00:00.000Z' ) } );
+		t.false( myopie.set( 'date/year', 2027, false ) );
+		t.is( myopie.get( 'date/year' ), undefined );
+	} );
+
+	test( prefix + ': should return false when setting property on RegExp value', ( t ) => {
+		const template = ( _data: any ): string => '';
+		const myopie = new Myopie( '#test', template, { pattern: /abc/ } );
+		t.false( myopie.set( 'pattern/source', 'def', false ) );
+		t.is( myopie.get( 'pattern/source' ), undefined );
 	} );
 }
 
@@ -804,6 +904,30 @@ let prefix: string;
 		textarea.dispatchEvent( new window.Event( 'input', { bubbles: true } ) );
 		t.is( myopie.get( 'testValue' ), 'textarea content' );
 	} );
+
+	test( prefix + ': unchecked checkbox should delete bound object property', ( t ) => {
+		document.body.innerHTML = '<div id="container"></div>';
+		const template = ( _data: any ): string => '<input type="checkbox" name="agree" value="yes">';
+		const myopie = new Myopie( '#container', template, { accepted: 'yes' }, [ [ 'input[name="agree"]', 'accepted' ] ], 0, false );
+		myopie.render();
+		const input = document.querySelector( 'input[name="agree"]' ) as HTMLInputElement;
+		input.checked = false;
+		input.dispatchEvent( new window.Event( 'input', { bubbles: true } ) );
+		t.is( myopie.get( 'accepted' ), undefined );
+	} );
+
+	test( prefix + ': renderOnInput true should update rendered DOM', ( t ) => {
+		document.body.innerHTML = '<div id="container"></div><input id="source">';
+		const template = ( data: any ): string => `<div>${data.text}</div>`;
+		const myopie = new Myopie( '#container', template, { text: 'initial' }, [ [ '#source', 'text' ] ], 0, true );
+		myopie.render();
+		const input = document.querySelector( '#source' ) as HTMLInputElement;
+		input.value = 'updated';
+		input.dispatchEvent( new window.Event( 'input', { bubbles: true } ) );
+		const container = document.querySelector( '#container' );
+		t.is( container?.textContent, 'updated' );
+		myopie.destroy();
+	} );
 }
 
 // ─── Lifecycle: destroy ──────────────────────────────────────────────────────
@@ -838,6 +962,19 @@ let prefix: string;
 		const button = document.querySelector( 'button' );
 		button?.dispatchEvent( new window.Event( 'click' ) );
 		t.false( clicked );
+	} );
+
+	test( prefix + ': should be idempotent when called twice', ( t ) => {
+		const template = ( _data: any ): string => '<div>content</div>';
+		const myopie = new Myopie( '#test', template, {} );
+		myopie.destroy();
+		t.notThrows( () => myopie.destroy() );
+	} );
+
+	test( prefix + ': should work before any render', ( t ) => {
+		const template = ( _data: any ): string => '<div>content</div>';
+		const myopie = new Myopie( '#test', template, {} );
+		t.notThrows( () => myopie.destroy() );
 	} );
 
 	test( prefix + ': should remove input event listener when inputToPath is set', ( t ) => {
@@ -1034,6 +1171,15 @@ let prefix: string;
 		myopie.render();
 		const input = document.querySelector( '#container input' ) as HTMLInputElement;
 		t.is( input?.getAttribute( 'value' ), 'old' );
+	} );
+
+	test( prefix + ': should remove live attribute that is absent from template', ( t ) => {
+		document.body.innerHTML = '<div id="container"><div data-custom="extra">content</div></div>';
+		const template = ( _data: any ): string => '<div>content</div>';
+		const myopie = new Myopie( '#container', template, {} );
+		myopie.render();
+		const div = document.querySelector( '#container div' );
+		t.is( div?.getAttribute( 'data-custom' ), null );
 	} );
 }
 

@@ -7,7 +7,7 @@
 
 ---
 
-**Short-sightedness by design.** A lightweight, template-engine-agnostic alternative to Vue for building reactive components, with some code initially ripped from [ReefJS](https://github.com/cferdinandi/reef).
+**Short-sightedness by design.** A client-side lightweight, template-engine-agnostic alternative to Vue for building reactive components, with some code initially ripped from [ReefJS](https://github.com/cferdinandi/reef).
 
 [![License](https://img.shields.io/github/license/stefanobalocco/myopie.js)](https://github.com/StefanoBalocco/myopie.js/blob/main/LICENSE.md)
 ![GZipped size](https://img.badgesize.io/stefanobalocco/myopie.js/main/myopie.min.js?compression=gzip)
@@ -21,24 +21,16 @@
 - **Efficient DOM diffing** — Updates only what changed.
 - **Lifecycle hooks** — Run custom logic before and after init or render.
 - **Template engine agnostic** — Works with any function that returns an HTML string.
-- **Lightweight** — No dependencies. 2.4kb compressed.
+- **Lightweight** — No dependencies. ~2.5kb compressed.
 
 ---
 
 ## Installation
 
-**Browser:**
-
 ```html
 <script type="module">
 import Myopie from 'https://cdn.jsdelivr.net/gh/StefanoBalocco/myopie.js/myopie.min.js';
 </script>
-```
-
-**Node:**
-
-```javascript
-import Myopie from 'myopie.js';
 ```
 
 ---

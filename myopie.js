@@ -5,6 +5,7 @@ export default class Myopie {
     static _nodeTypeElement = Node.ELEMENT_NODE;
     static _nodeTypeText = Node.TEXT_NODE;
     static _regexpPathSplit = /(?<!(?<!\\)\\)\//;
+    static _regexpPathUnescapeSlash = /(?<!\\)\\\//g;
     static _regexpMyopieDefaultOrIgnore = /^data-myopie-(?:default|ignore)-/;
     static _regexpMyopieDefault = /^data-myopie-default-.+/;
     static _comparators = {
@@ -96,17 +97,6 @@ export default class Myopie {
             returnValue[1] = container[path];
             return returnValue;
         },
-        Set: (container, path, _create = false) => {
-            const returnValue = [false, undefined];
-            const index = Number(path);
-            if (!isNaN(index)) {
-                const tmpValue = Array.from(container);
-                if (undefined !== tmpValue[index]) {
-                    returnValue[1] = tmpValue[index];
-                }
-            }
-            return returnValue;
-        }
     };
     _inputToPath = [];
     _selector;
@@ -469,6 +459,7 @@ export default class Myopie {
             if (0 < cL1) {
                 returnValue = components.reduce((current, component) => {
                     if (undefined !== current) {
+                        component = component.replace(Myopie._regexpPathUnescapeSlash, '/');
                         const tag = Myopie._objectToString.call(current).slice(8, -1);
                         const tmpValue = Myopie._navigators[tag] ? Myopie._navigators[tag](current, component, false) : [false, undefined];
                         current = tmpValue[1];
@@ -494,6 +485,7 @@ export default class Myopie {
         const lastComponentIndex = components.length - 1;
         const target = components.slice(0, lastComponentIndex).reduce((current, component) => {
             if (undefined !== current) {
+                component = component.replace(Myopie._regexpPathUnescapeSlash, '/');
                 const tag = Myopie._objectToString.call(current).slice(8, -1);
                 let result;
                 [result, current] = Myopie._navigators[tag] ? Myopie._navigators[tag](current, component, true) : [false, undefined];
@@ -502,16 +494,39 @@ export default class Myopie {
             return current;
         }, this._dataCurrent);
         if (undefined !== target) {
-            returnValue = true;
-            const lastComponent = components[lastComponentIndex];
-            const currentValue = target[lastComponent];
-            if (currentValue !== value) {
-                changed = true;
-                if (undefined !== value) {
-                    target[lastComponent] = value;
+            const lastComponent = components[lastComponentIndex].replace(Myopie._regexpPathUnescapeSlash, '/');
+            const tag = Myopie._objectToString.call(target).slice(8, -1);
+            switch (tag) {
+                case 'Map': {
+                    const targetMap = target;
+                    const currentValueExists = targetMap.has(lastComponent);
+                    const currentValue = targetMap.get(lastComponent);
+                    if ((currentValue !== value) || (undefined === value && currentValueExists)) {
+                        changed = true;
+                        if (undefined !== value) {
+                            targetMap.set(lastComponent, value);
+                        }
+                        else {
+                            targetMap.delete(lastComponent);
+                        }
+                    }
+                    returnValue = true;
+                    break;
                 }
-                else {
-                    delete target[lastComponent];
+                case 'Object':
+                case 'Array': {
+                    const currentValue = target[lastComponent];
+                    if (currentValue !== value) {
+                        changed = true;
+                        if (undefined !== value) {
+                            target[lastComponent] = value;
+                        }
+                        else {
+                            delete target[lastComponent];
+                        }
+                    }
+                    returnValue = true;
+                    break;
                 }
             }
             if (changed) {

@@ -8,6 +8,7 @@ export default class Myopie {
     private static readonly _nodeTypeElement;
     private static readonly _nodeTypeText;
     private static readonly _regexpPathSplit;
+    private static readonly _regexpPathUnescapeSlash;
     private static readonly _regexpMyopieDefaultOrIgnore;
     private static readonly _regexpMyopieDefault;
     private static readonly _comparators;

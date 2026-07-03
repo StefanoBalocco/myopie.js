@@ -1,5 +1,3 @@
-'use strict';
-
 type Undefinedable<T> = T | undefined;
 type Nullable<T> = T | null;
 type TemplateEngine = ( data: any ) => string;
@@ -26,6 +24,7 @@ export default class Myopie {
 	private static readonly _nodeTypeElement: number = Node.ELEMENT_NODE;
 	private static readonly _nodeTypeText: number = Node.TEXT_NODE;
 	private static readonly _regexpPathSplit: RegExp = /(?<!(?<!\\)\\)\//;
+	private static readonly _regexpPathUnescapeSlash: RegExp = /(?<!\\)\\\//g;
 	private static readonly _regexpMyopieDefaultOrIgnore: RegExp = /^data-myopie-(?:default|ignore)-/;
 	private static readonly _regexpMyopieDefault: RegExp = /^data-myopie-default-.+/;
 	private static readonly _comparators: Record<string, ( node1: HTMLElement, node2: HTMLElement ) => boolean> = {
@@ -127,17 +126,6 @@ export default class Myopie {
 			returnValue[ 1 ] = container[ path ];
 			return returnValue;
 		},
-		Set: ( container: any, path: string, _create: boolean = false ): [ boolean, any ] => {
-			const returnValue: [ boolean, any ] = [ false, undefined ];
-			const index: number = Number( path );
-			if( !isNaN( index ) ) {
-				const tmpValue: any[] = Array.from( container );
-				if( undefined !== tmpValue[ index ] ) {
-					returnValue[ 1 ] = tmpValue[ index ];
-				}
-			}
-			return returnValue;
-		}
 	};
 	private readonly _inputToPath: string[][] = [];
 	private readonly _selector: string;
@@ -526,6 +514,7 @@ export default class Myopie {
 				returnValue = components.reduce(
 					( current: any, component: string ): any => {
 						if( undefined !== current ) {
+							component = component.replace( Myopie._regexpPathUnescapeSlash, '/' );
 							const tag: string = Myopie._objectToString.call( current ).slice( 8, -1 );
 							const tmpValue: [ boolean, any ] = Myopie._navigators[ tag ] ? Myopie._navigators[ tag ]( current, component, false ) : [ false, undefined ];
 							current = tmpValue[ 1 ];
@@ -555,6 +544,7 @@ export default class Myopie {
 		const target: any = components.slice( 0, lastComponentIndex ).reduce(
 			( current: any, component: string ): any => {
 				if( undefined !== current ) {
+					component = component.replace( Myopie._regexpPathUnescapeSlash, '/' );
 					const tag: string = Myopie._objectToString.call( current ).slice( 8, -1 );
 					let result: boolean;
 					[ result, current ] = Myopie._navigators[ tag ] ? Myopie._navigators[ tag ]( current, component, true ) : [ false, undefined ];
@@ -565,15 +555,37 @@ export default class Myopie {
 			this._dataCurrent
 		);
 		if( undefined !== target ) {
-			returnValue = true;
-			const lastComponent: string = components[ lastComponentIndex ];
-			const currentValue: any = target[ lastComponent ];
-			if( currentValue !== value ) {
-				changed = true;
-				if( undefined !== value ) {
-					target[ lastComponent ] = value;
-				} else {
-					delete target[ lastComponent ];
+			const lastComponent: string = components[ lastComponentIndex ].replace( Myopie._regexpPathUnescapeSlash, '/' );
+			const tag: string = Myopie._objectToString.call( target ).slice( 8, -1 );
+			switch( tag ) {
+				case 'Map': {
+					const targetMap: Map<string, any> = target as Map<string, any>;
+					const currentValueExists: boolean = targetMap.has( lastComponent );
+					const currentValue: any = targetMap.get( lastComponent );
+					if( ( currentValue !== value ) || ( undefined === value && currentValueExists ) ) {
+						changed = true;
+						if( undefined !== value ) {
+							targetMap.set( lastComponent, value );
+						} else {
+							targetMap.delete( lastComponent );
+						}
+					}
+					returnValue = true;
+					break;
+				}
+				case 'Object':
+				case 'Array': {
+					const currentValue: any = target[ lastComponent ];
+					if( currentValue !== value ) {
+						changed = true;
+						if( undefined !== value ) {
+							target[ lastComponent ] = value;
+						} else {
+							delete target[ lastComponent ];
+						}
+					}
+					returnValue = true;
+					break;
 				}
 			}
 			if( changed ) {
