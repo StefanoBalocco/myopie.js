@@ -1,8 +1,20 @@
 {
-  "name": "myopie.js",
+  "name": "@stefanobalocco/myopie.js",
   "description": "View in MVC, but without foresight",
   "exports": "./myopie.min.js",
   "types": "myopie.d.ts",
+  "files": [
+    "myopie.js",
+    "myopie.min.js",
+    "myopie.d.ts",
+    "myopie.ts",
+    "myopie.test.js",
+    "myopie.test.ts",
+    "build.mjs",
+    "tsconfig.json",
+    "tsconfig.tests.json",
+    "jsdom.d.ts"
+  ],
   "type": "module",
   "repository": {
     "type": "git",
@@ -18,6 +30,9 @@
     "url": "https://github.com/StefanoBalocco/myopie.js/issues"
   },
   "homepage": "https://github.com/StefanoBalocco/myopie.js",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "node build.mjs library tests",
     "build:library": "node build.mjs library",
