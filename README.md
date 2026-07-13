@@ -33,6 +33,16 @@ import Myopie from 'https://cdn.jsdelivr.net/gh/StefanoBalocco/myopie.js/myopie.
 </script>
 ```
 
+Or install the package:
+
+```bash
+npm add @stefanobalocco/myopie.js
+```
+
+```javascript
+import Myopie from '@stefanobalocco/myopie.js';
+```
+
 ---
 
 ## Quick Start
@@ -51,6 +61,8 @@ import Myopie from 'https://cdn.jsdelivr.net/gh/StefanoBalocco/myopie.js/myopie.
     { name: 'World' },
     [['input', 'name']]
   );
+
+  myopie.render();
 
   setTimeout(() => myopie.set('name', 'User'), 2000);
 </script>
@@ -79,7 +91,7 @@ new Myopie(selector, template, initialData, inputToPath, timeout, renderOnInput)
 
 #### `render()`
 
-Renders the DOM immediately. Returns `false` if the target element is missing, `true` otherwise.
+Renders the DOM immediately. If the template output is unchanged since the previous render, the DOM is not touched. Returns `false` if the target element is missing, `true` otherwise.
 
 ```javascript
 myopie.render();
@@ -95,7 +107,7 @@ myopie.renderDebounce();
 
 #### `destroy()`
 
-Removes all event listeners and clears pending timers. Call this when tearing down the component.
+Detaches Myopie-managed event listeners and clears pending render timers. Call this when tearing down the component.
 
 ```javascript
 myopie.destroy();
@@ -103,7 +115,9 @@ myopie.destroy();
 
 #### `get(path)`
 
-Returns the value at `path` in the current state. Use slash-separated paths for nested properties.
+Returns the value at `path` in the current state. Paths are slash-separated and literal `/` characters are escaped with `\`. If the final value is a function, Myopie calls it and returns its result.
+
+Path components named `__proto__` are blocked to prevent prototype pollution.
 
 ```javascript
 const name = myopie.get('name');
@@ -112,7 +126,7 @@ const age = myopie.get('user/age');
 
 #### `set(path, value, render = true)`
 
-Sets a value at `path` in the state. Triggers a debounced re-render by default.
+Sets a value at `path` in the state. Returns `true` if the value can be set. Triggers a debounced re-render by default.
 
 - **`path`** (string) — Slash-separated path to the property.
 - **`value`** (any) — New value.
@@ -121,6 +135,19 @@ Sets a value at `path` in the state. Triggers a debounced re-render by default.
 ```javascript
 myopie.set('name', 'World');
 myopie.set('user/age', 30);
+```
+
+#### `del(path, render = true)`
+
+Deletes a value at `path` in the state. Returns `true` if it deletes a value. Triggers a debounced re-render by default.
+
+- **`path`** (string) — Slash-separated path to the value.
+- **`render`** (boolean, default `true`) — Trigger a re-render after deletion.
+
+```javascript
+myopie.del('name');
+myopie.del('user/age');
+myopie.del('items/2');
 ```
 
 #### `handlersPermanentAdd(selector, event, listener)`
@@ -196,6 +223,8 @@ Prevents the diffing algorithm from overwriting the `style` attribute on the ele
 #### `data-myopie-default-*`
 
 Sets an attribute only when that attribute is absent from the live element. The attribute name follows the prefix: `data-myopie-default-placeholder` sets `placeholder`.
+
+Adds the target attribute only when absent; otherwise, normal reconciliation removes it unless the template also includes the real attribute.
 
 ```html
 <input data-myopie-default-placeholder="Type here…" />

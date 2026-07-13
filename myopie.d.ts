@@ -21,7 +21,7 @@ export default class Myopie {
     private readonly _timeout;
     private readonly _onInput;
     private readonly _handlersPermanent;
-    private _dataCurrent;
+    private readonly _dataCurrent;
     private _dataPrevious;
     private _inited;
     private _lastRendering;
@@ -32,7 +32,7 @@ export default class Myopie {
     private static _removeEventListeners;
     private static _attributesFilter;
     private static _attributesMap;
-    private static _nodeSimilartyCoefficient;
+    private static _nodeSimilarityCoefficient;
     private static _nodeDiff;
     renderDebounce(): void;
     destroy(): void;
@@ -44,6 +44,7 @@ export default class Myopie {
     handlersPermanentDel(selector: string, event?: string, listener?: (event: Event) => void): boolean;
     render(): boolean;
     get(path: Nullable<string>): any;
+    del(path: string, render?: boolean): boolean;
     set(path: string, value: any, render?: boolean): boolean;
 }
 export {};

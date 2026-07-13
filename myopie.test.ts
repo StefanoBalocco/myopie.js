@@ -191,6 +191,30 @@ let prefix: string;
 		const myopie = new Myopie( '#test', template, { value: 42 } );
 		t.is( myopie.get( 'value/deeper' ), undefined );
 	} );
+
+	test( prefix + ': should return undefined for __proto__ path', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, testData );
+		t.is( myopie.get( '__proto__' ), undefined );
+	} );
+
+	test( prefix + ': should return undefined for nested __proto__ path', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { nested: { key: 'value' } } );
+		t.is( myopie.get( 'nested/__proto__' ), undefined );
+	} );
+
+	test( prefix + ': should return undefined for Map __proto__ key', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { map: new Map( [ [ '__proto__', 'value' ] ] ) } );
+		t.is( myopie.get( 'map/__proto__' ), undefined );
+	} );
+
+	test( prefix + ': should allow escaped __proto__ path', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { nested: { '__proto__/x': 'value' } } );
+		t.is( myopie.get( 'nested/__proto__\\/x' ), 'value' );
+	} );
 }
 
 // ─── API: set ────────────────────────────────────────────────────────────────
@@ -247,18 +271,22 @@ let prefix: string;
 		t.is( myopie.get( 'map/key' ), 'old' );
 	} );
 
-	test( prefix + ': should delete direct Map entry when setting undefined', ( t ) => {
-		const template = ( _data: any ): string => '';
-		const myopie = new Myopie( '#test', template, { map: new Map( [ [ 'key', 'old' ] ] ) } );
+	test( prefix + ': should store undefined in Map instead of deleting', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { map: new Map( [ [ 'key', 'old' ] ] ) } );
 		t.true( myopie.set( 'map/key', undefined, false ) );
-		t.is( myopie.get( 'map/key' ), undefined );
+		const mapValue: Map<string, any> = myopie.get( 'map' ) as Map<string, any>;
+		t.true( mapValue.has( 'key' ) );
+		t.is( mapValue.get( 'key' ), undefined );
 	} );
 
-	test( prefix + ': should not change Map when setting undefined on non-existent key', ( t ) => {
-		const template = ( _data: any ): string => '';
-		const myopie = new Myopie( '#test', template, { map: new Map( [ [ 'other', 'value' ] ] ) } );
+	test( prefix + ': should create Map entry when setting undefined on missing key', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { map: new Map( [ [ 'other', 'value' ] ] ) } );
 		t.true( myopie.set( 'map/missing', undefined, false ) );
-		t.is( myopie.get( 'map/missing' ), undefined );
+		const mapValue: Map<string, any> = myopie.get( 'map' ) as Map<string, any>;
+		t.true( mapValue.has( 'missing' ) );
+		t.is( mapValue.get( 'missing' ), undefined );
 		t.is( myopie.get( 'map/other' ), 'value' );
 	} );
 
@@ -290,11 +318,42 @@ let prefix: string;
 		t.is( myopie.get( 'key' ), 'new' );
 	} );
 
-	test( prefix + ': should delete value when setting to undefined', ( t ) => {
-		const template = ( _data: any ): string => '';
-		const myopie = new Myopie( '#test', template, { key: 'value' } );
-		t.true( myopie.set( 'key', undefined, false ) );
-		t.is( myopie.get( 'key' ), undefined );
+	test( prefix + ': should store undefined in object instead of deleting', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { obj: { key: 'value' } } );
+		t.true( myopie.set( 'obj/key', undefined, false ) );
+		const objectValue: any = myopie.get( 'obj' );
+		t.true( Object.hasOwn( objectValue, 'key' ) );
+		t.is( objectValue.key, undefined );
+	} );
+
+	test( prefix + ': should store undefined in array index', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { array: [ 'value' ] } );
+		t.true( myopie.set( 'array/0', undefined, false ) );
+		const arrayValue: any = myopie.get( 'array' );
+		t.true( Object.hasOwn( arrayValue, '0' ) );
+		t.is( arrayValue[ 0 ], undefined );
+	} );
+
+	test.serial( prefix + ': should make undefined an own property on nested object and trigger render', ( t ) => {
+		document.body.innerHTML = '<div id="container"></div>';
+		const template: ( data: any ) => string = ( data: any ): string => `<div>${Object.hasOwn( data.obj, 'missing' )}</div>`;
+		const myopie: any = new Myopie( '#container', template, { obj: {} }, [], 0 );
+		myopie.render();
+		t.is( document.querySelector( '#container' )?.textContent, 'false' );
+		myopie.set( 'obj/missing', undefined, true );
+		t.is( document.querySelector( '#container' )?.textContent, 'true' );
+		t.true( Object.hasOwn( myopie.get( 'obj' ), 'missing' ) );
+	} );
+
+	test( prefix + ': should make undefined an own index on empty nested array', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { items: [] } );
+		t.true( myopie.set( 'items/0', undefined, false ) );
+		const items: any = myopie.get( 'items' );
+		t.true( Object.hasOwn( items, '0' ) );
+		t.is( items[ 0 ], undefined );
 	} );
 
 	test( prefix + ': should not trigger render when render parameter is false', ( t ) => {
@@ -361,6 +420,194 @@ let prefix: string;
 		const myopie = new Myopie( '#test', template, { pattern: /abc/ } );
 		t.false( myopie.set( 'pattern/source', 'def', false ) );
 		t.is( myopie.get( 'pattern/source' ), undefined );
+	} );
+
+	test( prefix + ': should reject __proto__ path', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, {} );
+		t.false( myopie.set( '__proto__', { evil: true }, false ) );
+		t.is( myopie.get( 'evil' ), undefined );
+	} );
+
+	test( prefix + ': should reject Map __proto__ key', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { map: new Map() } );
+		t.false( myopie.set( 'map/__proto__', 'value', false ) );
+		t.is( myopie.get( 'map/__proto__' ), undefined );
+		const retrievedMap: Map<string, any> = myopie.get( 'map' ) as Map<string, any>;
+		t.false( retrievedMap.has( '__proto__' ) );
+	} );
+
+	test.serial( prefix + ': should reject __proto__ before creating intermediates', ( t ) => {
+		document.body.innerHTML = '<div id="container"></div>';
+		const template: ( data: any ) => string = ( data: any ): string => `<div>${Object.hasOwn( data, 'created' ) ? 'created' : 'missing'}</div>`;
+		const myopie: any = new Myopie( '#container', template, {}, [], 0 );
+		let preState: any;
+		myopie.hooksRenderAddPre( ( _dataCurrent: any, dataPrevious: any ): void => {
+			preState = dataPrevious;
+		} );
+		myopie.render();
+		t.is( document.querySelector( '#container' )?.textContent, 'missing' );
+		const returnValue: boolean = myopie.set( 'created/__proto__/later', 'value', true );
+		t.false( returnValue );
+		const created: any = myopie.get( 'created' );
+		t.true( undefined !== created );
+		t.false( Object.hasOwn( created, 'later' ) );
+		t.false( Object.hasOwn( created, '__proto__' ) );
+		t.is( document.querySelector( '#container' )?.textContent, 'created' );
+		t.false( Object.hasOwn( preState, 'created' ) );
+	} );
+}
+
+// ─── API: del ─────────────────────────────────────────────────────────────────
+
+{
+	prefix = 'del';
+
+	test( prefix + ': should expose del as a function', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, {} );
+		t.is( typeof myopie.del, 'function' );
+	} );
+
+	test( prefix + ': should not expose delete as an alias', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, {} );
+		t.is( typeof myopie.delete, 'undefined' );
+	} );
+
+	test( prefix + ': should delete existing nested Object property', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { obj: { key: 'value' } } );
+		t.true( myopie.del( 'obj/key', false ) );
+		t.is( myopie.get( 'obj/key' ), undefined );
+		const obj: any = myopie.get( 'obj' );
+		t.false( Object.hasOwn( obj, 'key' ) );
+	} );
+
+	test( prefix + ': should return false for missing nested Object property', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { obj: {} } );
+		t.false( myopie.del( 'obj/missing', false ) );
+	} );
+
+	test( prefix + ': should delete existing Array index', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { arr: [ 'a', 'b', 'c' ] } );
+		t.true( myopie.del( 'arr/1', false ) );
+		const arr: any = myopie.get( 'arr' );
+		t.is( arr.length, 3 );
+		t.is( arr[ 1 ], undefined );
+		t.false( Object.hasOwn( arr, '1' ) );
+	} );
+
+	test( prefix + ': should return false for missing Array index', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { arr: [] } );
+		t.false( myopie.del( 'arr/0', false ) );
+	} );
+
+	test( prefix + ': should delete existing Map key', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { map: new Map( [ [ 'key', 'value' ] ] ) } );
+		t.true( myopie.del( 'map/key', false ) );
+		t.is( myopie.get( 'map/key' ), undefined );
+		const mapVal: Map<string, any> = myopie.get( 'map' ) as Map<string, any>;
+		t.false( mapVal.has( 'key' ) );
+	} );
+
+	test( prefix + ': should return false for missing Map key', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { map: new Map() } );
+		t.false( myopie.del( 'map/missing', false ) );
+	} );
+
+	test( prefix + ': should not create intermediate containers', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, {} );
+		t.false( myopie.del( 'a/b/c', false ) );
+		t.is( myopie.get( 'a' ), undefined );
+	} );
+
+	test( prefix + ': should delete escaped slash key', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { 'key/with/slash': 'value' } );
+		t.true( myopie.del( 'key\\/with\\/slash', false ) );
+		t.is( myopie.get( 'key\\/with\\/slash' ), undefined );
+	} );
+
+	test( prefix + ': should reject __proto__ path', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, {} );
+		t.false( myopie.del( '__proto__', false ) );
+	} );
+
+	test( prefix + ': should reject __proto__ intermediate in delete', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { obj: { existing: 'value' } } );
+		t.false( myopie.del( 'obj/__proto__/key', false ) );
+		const obj: any = myopie.get( 'obj' );
+		t.true( undefined !== obj );
+		t.is( obj.existing, 'value' );
+		t.false( Object.hasOwn( obj, '__proto__' ) );
+	} );
+
+	test( prefix + ': should reject Map __proto__ key', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { map: new Map() } );
+		t.false( myopie.del( 'map/__proto__', false ) );
+	} );
+
+	test( prefix + ': should reject deleting __proto__ from Map that already has it', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const mapWithProto: Map<string, any> = new Map( [ [ '__proto__', 'value' ] ] );
+		const myopie: any = new Myopie( '#test', template, { map: mapWithProto } );
+		t.false( myopie.del( 'map/__proto__', false ) );
+		const retrievedMap: Map<string, any> = myopie.get( 'map' ) as Map<string, any>;
+		t.true( retrievedMap.has( '__proto__' ) );
+		t.is( retrievedMap.get( '__proto__' ), 'value' );
+	} );
+
+	test( prefix + ': should return false when deleting through non-navigable intermediate', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { value: 42 } );
+		t.false( myopie.del( 'value/deeper/key', false ) );
+		t.is( myopie.get( 'value' ), 42 );
+	} );
+
+	test.serial( prefix + ': should pass pre-delete value to render hook via dataPrevious', ( t ) => {
+		document.body.innerHTML = '<div id="container"></div>';
+		const template: ( data: any ) => string = ( data: any ): string => `<div>${data.value}</div>`;
+		const myopie: any = new Myopie( '#container', template, { value: 'before' }, [], 0 );
+		let previousData: any;
+		myopie.hooksRenderAddPre( ( _dataCurrent: any, dataPrevious: any ): void => {
+			previousData = dataPrevious;
+		} );
+		myopie.render();
+		t.true( myopie.del( 'value', true ) );
+		t.is( previousData?.value, 'before' );
+	} );
+
+	test.serial( prefix + ': should update DOM after deletion with render=true', async ( t ) => {
+		document.body.innerHTML = '<div id="container"><div>old</div></div>';
+		const template: ( data: any ) => string = ( data: any ): string => `<div>${data.content}</div>`;
+		const myopie: any = new Myopie( '#container', template, { content: 'value' }, [], 0 );
+		myopie.render();
+		t.is( document.querySelector( '#container' )?.textContent, 'value' );
+		myopie.del( 'content', true );
+		const container: Element | null = document.querySelector( '#container' );
+		t.is( container?.textContent, 'undefined' );
+	} );
+
+	test( prefix + ': should return false when deleting non-configurable array length', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const myopie: any = new Myopie( '#test', template, { arr: [ 'a', 'b', 'c' ] } );
+		t.false( myopie.del( 'arr/length', false ) );
+		const arr: any = myopie.get( 'arr' );
+		t.is( arr.length, 3 );
+		t.is( arr[ 0 ], 'a' );
+		t.is( arr[ 1 ], 'b' );
+		t.is( arr[ 2 ], 'c' );
 	} );
 }
 
@@ -432,6 +679,14 @@ let prefix: string;
 		map.set( 'key2', 'value2' );
 		const clonedMap = myopie.get( 'map' ) as Map<string, string>;
 		t.false( clonedMap.has( 'key2' ) );
+	} );
+
+	test( prefix + ': should reject __proto__ pollution via deep clone', ( t ) => {
+		const template: ( _data: any ) => string = ( _data: any ): string => '';
+		const payload: any = JSON.parse( '{"__proto__":{"evil":true}}' );
+		const myopie: any = new Myopie( '#test', template, payload );
+		t.is( myopie.get( 'evil' ), undefined );
+		t.is( ( {} as any ).evil, undefined );
 	} );
 }
 
@@ -588,7 +843,7 @@ let prefix: string;
 		document.body.innerHTML = '<div id="container"></div>';
 		const template = ( _data: any ): string => '<div>content</div>';
 		const myopie = new Myopie( '#container', template, { value: 'test' } );
-		let hookCalled = false;
+		let hookCalled: boolean = false;
 		let hookData: any;
 		myopie.hooksInitAddPre( ( dataCurrent: any ): void => {
 			hookCalled = true;
@@ -603,7 +858,7 @@ let prefix: string;
 		document.body.innerHTML = '<div id="container"></div>';
 		const template = ( _data: any ): string => '<div>content</div>';
 		const myopie = new Myopie( '#container', template, {} );
-		let callCount = 0;
+		let callCount: number = 0;
 		myopie.hooksInitAddPre( (): void => {
 			callCount++;
 		} );
@@ -620,7 +875,7 @@ let prefix: string;
 		document.body.innerHTML = '<div id="container"></div>';
 		const template = ( _data: any ): string => '<div>content</div>';
 		const myopie = new Myopie( '#container', template, { value: 'test' } );
-		let hookCalled = false;
+		let hookCalled: boolean = false;
 		let hookData: any;
 		myopie.hooksInitAddPost( ( dataCurrent: any ): void => {
 			hookCalled = true;
@@ -635,7 +890,7 @@ let prefix: string;
 		document.body.innerHTML = '<div id="container"></div>';
 		const template = ( _data: any ): string => '<div>content</div>';
 		const myopie = new Myopie( '#container', template, {} );
-		let callCount = 0;
+		let callCount: number = 0;
 		myopie.hooksInitAddPost( (): void => {
 			callCount++;
 		} );
@@ -652,7 +907,7 @@ let prefix: string;
 		document.body.innerHTML = '<div id="container"></div>';
 		const template = ( _data: any ): string => '<div>content</div>';
 		const myopie = new Myopie( '#container', template, {} );
-		let hookCalled = false;
+		let hookCalled: boolean = false;
 		myopie.hooksRenderAddPre( (): void => {
 			hookCalled = true;
 		} );
@@ -664,7 +919,7 @@ let prefix: string;
 		document.body.innerHTML = '<div id="container"></div>';
 		const template = ( data: any ): string => `<div>${data.value}</div>`;
 		const myopie = new Myopie( '#container', template, { value: 'initial' } );
-		let hookCalled = false;
+		let hookCalled: boolean = false;
 		let currentData: any;
 		let previousData: any;
 		myopie.hooksRenderAddPre( ( dataCurrent: any, dataPrevious: any ): void => {
@@ -688,7 +943,7 @@ let prefix: string;
 		document.body.innerHTML = '<div id="container"></div>';
 		const template = ( _data: any ): string => '<div>content</div>';
 		const myopie = new Myopie( '#container', template, {} );
-		let hookCalled = false;
+		let hookCalled: boolean = false;
 		myopie.hooksRenderAddPost( (): void => {
 			hookCalled = true;
 		} );
@@ -757,7 +1012,7 @@ let prefix: string;
 		document.body.innerHTML = '<div id="container"></div>';
 		const template = ( _data: any ): string => '<button>Click</button>';
 		const myopie = new Myopie( '#container', template, {} );
-		let clicked = false;
+		let clicked: boolean = false;
 		const handler = (): void => {
 			clicked = true;
 		};
@@ -772,7 +1027,7 @@ let prefix: string;
 		document.body.innerHTML = '<div id="container"></div>';
 		const template = ( data: any ): string => `<button>${data.label}</button>`;
 		const myopie = new Myopie( '#container', template, { label: 'First' } );
-		let clickCount = 0;
+		let clickCount: number = 0;
 		const handler = (): void => {
 			clickCount++;
 		};
@@ -827,8 +1082,8 @@ let prefix: string;
 		document.body.innerHTML = '<div id="container"></div>';
 		const template = ( _data: any ): string => '<button>Click</button>';
 		const myopie = new Myopie( '#container', template, {} );
-		let count1 = 0;
-		let count2 = 0;
+		let count1: number = 0;
+		let count2: number = 0;
 		const handler1 = (): void => { count1++; };
 		const handler2 = (): void => { count2++; };
 		myopie.handlersPermanentAdd( 'button', 'click', handler1 );
@@ -845,7 +1100,7 @@ let prefix: string;
 		document.body.innerHTML = '<div id="container"></div>';
 		const template = ( _data: any ): string => '<button>Click</button>';
 		const myopie = new Myopie( '#container', template, {} );
-		let clicked = false;
+		let clicked: boolean = false;
 		const handler = (): void => {
 			clicked = true;
 		};
@@ -905,15 +1160,17 @@ let prefix: string;
 		t.is( myopie.get( 'testValue' ), 'textarea content' );
 	} );
 
-	test( prefix + ': unchecked checkbox should delete bound object property', ( t ) => {
+	test( prefix + ': unchecked checkbox should store undefined', ( t ) => {
 		document.body.innerHTML = '<div id="container"></div>';
-		const template = ( _data: any ): string => '<input type="checkbox" name="agree" value="yes">';
-		const myopie = new Myopie( '#container', template, { accepted: 'yes' }, [ [ 'input[name="agree"]', 'accepted' ] ], 0, false );
+		const template: ( _data: any ) => string = ( _data: any ): string => '<input type="checkbox" name="agree" value="yes">';
+		const myopie: any = new Myopie( '#container', template, { test: { accepted: 'yes' } }, [ [ 'input[name="agree"]', 'test/accepted' ] ], 0, false );
 		myopie.render();
 		const input = document.querySelector( 'input[name="agree"]' ) as HTMLInputElement;
 		input.checked = false;
 		input.dispatchEvent( new window.Event( 'input', { bubbles: true } ) );
-		t.is( myopie.get( 'accepted' ), undefined );
+		t.is( myopie.get( 'test/accepted' ), undefined );
+		const testObj: any = myopie.get( 'test' );
+		t.true( Object.hasOwn( testObj, 'accepted' ) );
 	} );
 
 	test( prefix + ': renderOnInput true should update rendered DOM', ( t ) => {
@@ -952,7 +1209,7 @@ let prefix: string;
 		document.body.innerHTML = '<div id="container"></div>';
 		const template = ( _data: any ): string => '<button>Click</button>';
 		const myopie = new Myopie( '#container', template, {} );
-		let clicked = false;
+		let clicked: boolean = false;
 		const handler = (): void => {
 			clicked = true;
 		};
@@ -1014,6 +1271,17 @@ let prefix: string;
 		const div = document.querySelector( '#container div' );
 		t.is( div?.textContent, 'preserved' );
 	} );
+
+	test( prefix + ': should not leak ignore-content to later sibling', ( t ) => {
+		document.body.innerHTML = '<div id="container"><div data-myopie-ignore-content="true">preserved</div><div>old</div></div>';
+		const template: ( _data: any ) => string = ( _data: any ): string => '<div data-myopie-ignore-content="true">replaced</div><div>new</div>';
+		const myopie: any = new Myopie( '#container', template, {} );
+		myopie.render();
+		const divs: NodeListOf<Element> = document.querySelectorAll( '#container div' );
+		t.is( divs.length, 2 );
+		t.is( divs[ 0 ].textContent, 'preserved' );
+		t.is( divs[ 1 ].textContent, 'new' );
+	} );
 }
 
 {
@@ -1035,6 +1303,17 @@ let prefix: string;
 		myopie.render();
 		const div = document.querySelector( '#container div' ) as HTMLElement;
 		t.is( div?.style.color, 'red' );
+	} );
+
+	test( prefix + ': should not leak ignore-style to later sibling', ( t ) => {
+		document.body.innerHTML = '<div id="container"><div data-myopie-ignore-style="true" style="color: red;">content</div><div style="color: green;">text</div></div>';
+		const template: ( _data: any ) => string = ( _data: any ): string => '<div data-myopie-ignore-style="true" style="color: blue;">content</div><div style="color: yellow;">text</div>';
+		const myopie: any = new Myopie( '#container', template, {} );
+		myopie.render();
+		const divs: NodeListOf<Element> = document.querySelectorAll( '#container div' );
+		t.is( divs.length, 2 );
+		t.is( ( divs[ 0 ] as HTMLElement ).style.color, 'red' );
+		t.is( ( divs[ 1 ] as HTMLElement ).style.color, 'yellow' );
 	} );
 }
 
@@ -1066,6 +1345,37 @@ let prefix: string;
 		myopie.render();
 		const div = document.querySelector( '#container div' );
 		t.is( div?.getAttribute( 'data-myopie-default-class' ), null );
+	} );
+
+	test( prefix + ': should apply default attribute on cloned root element', ( t ) => {
+		document.body.innerHTML = '<div id="container"></div>';
+		const template: ( _data: any ) => string = ( _data: any ): string => '<div data-myopie-default-class="default-class">content</div>';
+		const myopie: any = new Myopie( '#container', template, {} );
+		myopie.render();
+		const div: Element | null = document.querySelector( '#container div' );
+		t.is( div?.getAttribute( 'class' ), 'default-class' );
+		t.is( div?.getAttribute( 'data-myopie-default-class' ), null );
+	} );
+
+	test( prefix + ': should apply default attribute on cloned descendant', ( t ) => {
+		document.body.innerHTML = '<div id="container"></div>';
+		const template: ( _data: any ) => string = ( _data: any ): string => '<div><span data-myopie-default-title="child-title">child</span></div>';
+		const myopie: any = new Myopie( '#container', template, {} );
+		myopie.render();
+		const span: Element | null = document.querySelector( '#container span' );
+		t.is( span?.getAttribute( 'title' ), 'child-title' );
+		t.is( span?.getAttribute( 'data-myopie-default-title' ), null );
+	} );
+
+	test( prefix + ': should apply default attribute on unmatched candidate clone', ( t ) => {
+		document.body.innerHTML = '<div id="container"><span>existing</span></div>';
+		const template: ( _data: any ) => string = ( _data: any ): string => '<div data-myopie-default-class="default-class">new</div>';
+		const myopie: any = new Myopie( '#container', template, {} );
+		myopie.render();
+		const div: Element | null = document.querySelector( '#container div' );
+		t.is( div?.getAttribute( 'class' ), 'default-class' );
+		const span: Element | null = document.querySelector( '#container span' );
+		t.is( span, null );
 	} );
 }
 
@@ -1180,6 +1490,16 @@ let prefix: string;
 		myopie.render();
 		const div = document.querySelector( '#container div' );
 		t.is( div?.getAttribute( 'data-custom' ), null );
+	} );
+
+	test( prefix + ': should remove multiple live attributes absent from template', ( t ) => {
+		document.body.innerHTML = '<div id="container"><div data-a="1" data-b="2">content</div></div>';
+		const template: ( _data: any ) => string = ( _data: any ): string => '<div>content</div>';
+		const myopie: any = new Myopie( '#container', template, {} );
+		myopie.render();
+		const div: Element | null = document.querySelector( '#container div' );
+		t.is( div?.getAttribute( 'data-a' ), null );
+		t.is( div?.getAttribute( 'data-b' ), null );
 	} );
 }
 

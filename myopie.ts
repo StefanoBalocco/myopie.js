@@ -134,7 +134,7 @@ export default class Myopie {
 	private readonly _timeout: number;
 	private readonly _onInput: Undefinedable<( event: Event ) => void>;
 	private readonly _handlersPermanent: Map<string, EventHandler[]> = new Map<string, EventHandler[]>();
-	private _dataCurrent: any;
+	private readonly _dataCurrent: any;
 	private _dataPrevious: any;
 	private _inited: boolean = false;
 	private _lastRendering: Undefinedable<string>;
@@ -179,8 +179,10 @@ export default class Myopie {
 			case 'Object': {
 				returnValue = Array.isArray( element ) ? [] : {};
 				for( const key in element ) {
-					const value: any = element[ key ];
-					returnValue[ key ] = Myopie._deepClone( value );
+					if( Object.hasOwn( element, key ) && ( '__proto__' !== key ) ) {
+						const value: any = element[ key ];
+						returnValue[ key ] = Myopie._deepClone( value );
+					}
 				}
 				break;
 			}
@@ -228,7 +230,7 @@ export default class Myopie {
 		return [ attribute.name, attribute.value ].join( String.fromCharCode( 0 ) );
 	}
 
-	private static _nodeSimilartyCoefficient( node1: Element, node2: Element ): number {
+	private static _nodeSimilarityCoefficient( node1: Element, node2: Element ): number {
 		let returnValue: number = 0;
 		if( node1.isEqualNode( node2 ) ) {
 			returnValue |= 1 << 30;
@@ -243,35 +245,39 @@ export default class Myopie {
 							if( node1.id ) {
 								returnValue |= 1 << 27;
 							}
-							if( node1.innerHTML === node2.innerHTML ) {
-								returnValue |= 1 << 26;
-							}
-
-							const tagName: string = node1.tagName.toLowerCase();
-							if( tagName && Myopie._comparators[ tagName ] && Myopie._comparators[ tagName ]( node1 as HTMLElement, node2 as HTMLElement ) ) {
-								returnValue |= 1 << 25;
-							}
-
-							const attributes1: Attr[] = Array.from( node1.attributes ).filter( Myopie._attributesFilter );
-							const attributes2: Attr[] = Array.from( node2.attributes ).filter( Myopie._attributesFilter );
-							if( attributes1.length === attributes2.length ) {
-								const tmpValue1: string = attributes1.map( Myopie._attributesMap ).sort().join( String.fromCharCode( 0 ) );
-								const tmpValue2: string = attributes2.map( Myopie._attributesMap ).sort().join( String.fromCharCode( 0 ) );
-								if( tmpValue1 === tmpValue2 ) {
-									returnValue |= 1 << 24;
+							if( !returnValue ) {
+								if( node1.childElementCount === node2.childElementCount ) {
+									returnValue |= 1 << 21;
+									if( node1.childNodes.length === node2.childNodes.length ) {
+										returnValue |= 1 << 22;
+										if( node1.textContent === node2.textContent ) {
+											returnValue |= 1 << 23;
+										}
+									}
 								}
-							}
 
-							if( node1.classList.length && node2.classList.length ) {
-								const node1Classes: string = Array.from( node1.classList ).sort().join( ' ' );
-								const node2Classes: string = Array.from( node2.classList ).sort().join( ' ' );
-								if( node1Classes === node2Classes ) {
-									returnValue |= 1 << 23;
+								const tagName: string = node1.tagName.toLowerCase();
+								if( tagName && Myopie._comparators[ tagName ] && Myopie._comparators[ tagName ]( node1 as HTMLElement, node2 as HTMLElement ) ) {
+									returnValue |= 1 << 26;
 								}
-							}
 
-							if( node1.childElementCount === node2.childElementCount ) {
-								returnValue |= 1 << 22;
+								const attributes1: Attr[] = Array.from( node1.attributes ).filter( Myopie._attributesFilter );
+								const attributes2: Attr[] = Array.from( node2.attributes ).filter( Myopie._attributesFilter );
+								if( attributes1.length === attributes2.length ) {
+									const tmpValue1: string = attributes1.map( Myopie._attributesMap ).sort().join( String.fromCharCode( 0 ) );
+									const tmpValue2: string = attributes2.map( Myopie._attributesMap ).sort().join( String.fromCharCode( 0 ) );
+									if( tmpValue1 === tmpValue2 ) {
+										returnValue |= 1 << 25;
+									}
+								}
+
+								if( node1.classList.length && node2.classList.length ) {
+									const node1Classes: string = Array.from( node1.classList ).sort().join( ' ' );
+									const node2Classes: string = Array.from( node2.classList ).sort().join( ' ' );
+									if( node1Classes === node2Classes ) {
+										returnValue |= 1 << 24;
+									}
+								}
 							}
 						}
 					}
@@ -281,7 +287,7 @@ export default class Myopie {
 		return returnValue;
 	}
 
-	private static _nodeDiff( nodeTemplate: ParentNode, nodeExisting: ParentNode, ignore: { content: boolean, style: boolean } ): void {
+	private static _nodeDiff( nodeTemplate: ParentNode, nodeExisting: ParentNode, ignore: { content: boolean, style: boolean }, force: boolean = false ): void {
 		const nodesTemplate: NodeListOf<ChildNode> = nodeTemplate.childNodes;
 		const nodesExisting: NodeListOf<ChildNode> = nodeExisting.childNodes;
 		const nodesExistingArray: ChildNode[] = Array.from( nodesExisting );
@@ -289,11 +295,16 @@ export default class Myopie {
 		for( let iL1: number = 0; iL1 < cL1; iL1++ ) {
 			const tmpItem: Element = nodesTemplate[ iL1 ] as Element;
 			if( [ Myopie._nodeTypeElement, Myopie._nodeTypeText ].includes( nodesTemplate[ iL1 ].nodeType ) ) {
+				let forceCurrent: boolean = force;
+				let skipReconciliation: boolean = false;
+				let currentItem: Undefinedable<Element>;
 				if( !nodesExistingArray.length ) {
 					switch( tmpItem.nodeType ) {
 						case Myopie._nodeTypeText:
 						case Myopie._nodeTypeElement: {
-							nodeExisting.append( tmpItem.cloneNode( true ) );
+							currentItem = tmpItem.cloneNode( true ) as Element;
+							nodeExisting.append( currentItem );
+							forceCurrent = true;
 							break;
 						}
 					}
@@ -302,7 +313,7 @@ export default class Myopie {
 					let score: number = 0;
 					nodesExistingArray.find(
 						( candidate: ChildNode ): boolean => {
-							const value: number = Myopie._nodeSimilartyCoefficient( tmpItem, candidate as Element );
+							const value: number = Myopie._nodeSimilarityCoefficient( tmpItem, candidate as Element );
 							if( value > score ) {
 								score = value;
 								element = candidate as Element;
@@ -314,57 +325,57 @@ export default class Myopie {
 						nodesExistingArray.splice( nodesExistingArray.indexOf( element ), 1 );
 					} else {
 						element = tmpItem.cloneNode( true ) as Element;
+						forceCurrent = true;
 					}
-					let currentItem: Element = nodesExisting[ iL1 ] as Element;
+					skipReconciliation = !forceCurrent && ( 0 !== ( score & ( 1 << 30 ) ) );
+					currentItem = nodesExisting[ iL1 ] as Element;
 					if( !currentItem.isEqualNode( element ) ) {
 						currentItem = nodeExisting.insertBefore<Element>(
 							element,
 							nodesExisting[ iL1 ]
 						);
 					}
-					if( !currentItem.isEqualNode( tmpItem ) ) {
-						const templateContent: Nullable<string> = ( ( tmpItem.childNodes.length ) ? null : tmpItem.textContent );
-						const existingContent: Nullable<string> = ( ( currentItem.childNodes.length ) ? null : currentItem.textContent );
-						if( Myopie._nodeTypeElement === tmpItem.nodeType ) {
-							const addedDefault: string[] = [];
-							if( 'true' === tmpItem.getAttribute( 'data-myopie-ignore-content' ) ) {
-								ignore.content = true;
+				}
+				if( currentItem && !skipReconciliation ) {
+					const templateContent: Nullable<string> = ( ( tmpItem.childNodes.length ) ? null : tmpItem.textContent );
+					const existingContent: Nullable<string> = ( ( currentItem.childNodes.length ) ? null : currentItem.textContent );
+					if( Myopie._nodeTypeElement === tmpItem.nodeType ) {
+						const localIgnore: { content: boolean, style: boolean } = {
+							content: ignore.content || ( 'true' === tmpItem.getAttribute( 'data-myopie-ignore-content' ) ),
+							style: ignore.style || ( 'true' === tmpItem.getAttribute( 'data-myopie-ignore-style' ) )
+						};
+						const addedDefault: string[] = [];
+						if( !localIgnore.content ) {
+							if( templateContent != existingContent ) {
+								currentItem.textContent = templateContent;
 							}
-							if( 'true' === tmpItem.getAttribute( 'data-myopie-ignore-style' ) ) {
-								ignore.style = true;
-							}
-							if( !ignore.content ) {
-								if( templateContent != existingContent ) {
-									currentItem.textContent = templateContent;
+						}
+						for( let { name, value } of tmpItem.attributes ) {
+							if( Myopie._regexpMyopieDefault.test( name ) ) {
+								const realName: string = name.substring( 20 );
+								if( null === currentItem.getAttribute( realName ) ) {
+									addedDefault.push( realName );
+									currentItem.setAttribute( realName, value );
+								}
+							} else if( !Myopie._regexpMyopieDefaultOrIgnore.test( name ) ) {
+								const protectedStyle: boolean = localIgnore.style && ( 'style' === name );
+								const protectedAttribute: boolean = ( [ 'input', 'option', 'textarea' ].includes( currentItem.tagName.toLowerCase() ) && [ 'value', 'selected', 'checked' ].includes( name ) );
+								const existingAttribute: Nullable<string> = currentItem.getAttribute( name );
+								if( ( ( existingAttribute !== value ) && !protectedStyle && !protectedAttribute ) || ( null === existingAttribute ) ) {
+									currentItem.setAttribute( name, value );
 								}
 							}
-							for( let { name, value } of tmpItem.attributes ) {
-								if( Myopie._regexpMyopieDefault.test( name ) ) {
-									const realName: string = name.substring( 20 );
-									if( null === currentItem.getAttribute( realName ) ) {
-										addedDefault.push( realName );
-										currentItem.setAttribute( realName, value );
-									}
-								} else if( !Myopie._regexpMyopieDefaultOrIgnore.test( name ) ) {
-									const protectedStyle: Undefinedable<boolean> = ignore?.style && ( 'style' === name );
-									const protectedAttribute: boolean = ( [ 'input', 'option', 'textarea' ].includes( currentItem.tagName.toLowerCase() ) && [ 'value', 'selected', 'checked' ].includes( name ) );
-									const existingAttribute: Nullable<string> = currentItem.getAttribute( name );
-									if( ( ( existingAttribute !== value ) && !protectedStyle && !protectedAttribute ) || ( null === existingAttribute ) ) {
-										currentItem.setAttribute( name, value );
-									}
+						}
+						for( let { name } of Array.from( currentItem.attributes ) ) {
+							if( null === tmpItem.getAttribute( name ) && !addedDefault.includes( name ) ) {
+								if( !localIgnore.style || ( name !== 'style' ) ) {
+									currentItem.removeAttribute( name );
 								}
 							}
-							for( let { name } of currentItem.attributes ) {
-								if( null === tmpItem.getAttribute( name ) && !addedDefault.includes( name ) ) {
-									if( !ignore?.style || ( name !== 'style' ) ) {
-										currentItem.removeAttribute( name );
-									}
-								}
-							}
-							// content
-							if( !ignore.content && tmpItem.childNodes.length ) {
-								Myopie._nodeDiff( tmpItem, currentItem, { ...ignore } );
-							}
+						}
+						// content
+						if( !localIgnore.content && tmpItem.childNodes.length ) {
+							Myopie._nodeDiff( tmpItem, currentItem, localIgnore, forceCurrent );
 						}
 					}
 				}
@@ -508,16 +519,20 @@ export default class Myopie {
 	public get( path: Nullable<string> ): any {
 		let returnValue: any;
 		if( null != path ) {
-			const components: string [] = path.split( Myopie._regexpPathSplit );
+			const components: string[] = path.split( Myopie._regexpPathSplit );
 			const cL1: number = components.length;
 			if( 0 < cL1 ) {
 				returnValue = components.reduce(
 					( current: any, component: string ): any => {
 						if( undefined !== current ) {
 							component = component.replace( Myopie._regexpPathUnescapeSlash, '/' );
-							const tag: string = Myopie._objectToString.call( current ).slice( 8, -1 );
-							const tmpValue: [ boolean, any ] = Myopie._navigators[ tag ] ? Myopie._navigators[ tag ]( current, component, false ) : [ false, undefined ];
-							current = tmpValue[ 1 ];
+							if( '__proto__' === component ) {
+								current = undefined;
+							} else {
+								const tag: string = Myopie._objectToString.call( current ).slice( 8, -1 );
+								const tmpValue: [ boolean, any ] = Myopie._navigators[ tag ] ? Myopie._navigators[ tag ]( current, component, false ) : [ false, undefined ];
+								current = tmpValue[ 1 ];
+							}
 						}
 						return current;
 					},
@@ -531,70 +546,134 @@ export default class Myopie {
 		return returnValue;
 	}
 
-	public set( path: string, value: any, render = true ): boolean {
+	public del( path: string, render: boolean = true ): boolean {
 		let returnValue: boolean = false;
+		const components: string[] = path.split( Myopie._regexpPathSplit );
 		let resetPrevious: boolean = false;
 		if( !this._dataPrevious ) {
 			resetPrevious = true;
 			this._dataPrevious = Myopie._deepClone( this._dataCurrent );
 		}
-		let changed: boolean = false;
-		const components: string[] = path.split( Myopie._regexpPathSplit );
 		const lastComponentIndex: number = components.length - 1;
 		const target: any = components.slice( 0, lastComponentIndex ).reduce(
 			( current: any, component: string ): any => {
 				if( undefined !== current ) {
 					component = component.replace( Myopie._regexpPathUnescapeSlash, '/' );
-					const tag: string = Myopie._objectToString.call( current ).slice( 8, -1 );
-					let result: boolean;
-					[ result, current ] = Myopie._navigators[ tag ] ? Myopie._navigators[ tag ]( current, component, true ) : [ false, undefined ];
-					changed ||= result;
+					if( '__proto__' === component ) {
+						current = undefined;
+					} else {
+						const tag: string = Myopie._objectToString.call( current ).slice( 8, -1 );
+						[ , current ] = Myopie._navigators[ tag ] ? Myopie._navigators[ tag ]( current, component, false ) : [ false, undefined ];
+					}
 				}
 				return current;
 			},
 			this._dataCurrent
 		);
 		if( undefined !== target ) {
-			const lastComponent: string = components[ lastComponentIndex ].replace( Myopie._regexpPathUnescapeSlash, '/' );
-			const tag: string = Myopie._objectToString.call( target ).slice( 8, -1 );
-			switch( tag ) {
-				case 'Map': {
-					const targetMap: Map<string, any> = target as Map<string, any>;
-					const currentValueExists: boolean = targetMap.has( lastComponent );
-					const currentValue: any = targetMap.get( lastComponent );
-					if( ( currentValue !== value ) || ( undefined === value && currentValueExists ) ) {
-						changed = true;
-						if( undefined !== value ) {
-							targetMap.set( lastComponent, value );
-						} else {
+			let lastComponent: string = components[ lastComponentIndex ];
+			lastComponent = lastComponent.replace( Myopie._regexpPathUnescapeSlash, '/' );
+			if( '__proto__' !== lastComponent ) {
+				const tag: string = Myopie._objectToString.call( target ).slice( 8, -1 );
+				switch( tag ) {
+					case 'Map': {
+						const targetMap: Map<string, any> = target as Map<string, any>;
+						if( targetMap.has( lastComponent ) ) {
 							targetMap.delete( lastComponent );
+							returnValue = true;
 						}
+						break;
 					}
-					returnValue = true;
-					break;
-				}
-				case 'Object':
-				case 'Array': {
-					const currentValue: any = target[ lastComponent ];
-					if( currentValue !== value ) {
-						changed = true;
-						if( undefined !== value ) {
-							target[ lastComponent ] = value;
-						} else {
-							delete target[ lastComponent ];
+					case 'Object':
+					case 'Array': {
+						if( Object.hasOwn( target, lastComponent ) ) {
+							const descriptor: Undefinedable<PropertyDescriptor> = Object.getOwnPropertyDescriptor( target, lastComponent );
+							if( descriptor?.configurable ) {
+								delete target[ lastComponent ];
+								returnValue = true;
+							}
 						}
+						break;
 					}
-					returnValue = true;
-					break;
 				}
 			}
-			if( changed ) {
+			if( returnValue ) {
 				if( render ) {
 					this.renderDebounce();
 				}
 			} else if( resetPrevious ) {
 				this._dataPrevious = undefined;
 			}
+		} else if( resetPrevious ) {
+			this._dataPrevious = undefined;
+		}
+		return returnValue;
+	}
+
+	public set( path: string, value: any, render = true ): boolean {
+		let returnValue: boolean = false;
+		const components: string[] = path.split( Myopie._regexpPathSplit );
+		let resetPrevious: boolean = false;
+		if( !this._dataPrevious ) {
+			resetPrevious = true;
+			this._dataPrevious = Myopie._deepClone( this._dataCurrent );
+		}
+		let changed: boolean = false;
+		const lastComponentIndex: number = components.length - 1;
+		const target: any = components.slice( 0, lastComponentIndex ).reduce(
+			( current: any, component: string ): any => {
+				if( undefined !== current ) {
+					component = component.replace( Myopie._regexpPathUnescapeSlash, '/' );
+					if( '__proto__' === component ) {
+						current = undefined;
+					} else {
+						const tag: string = Myopie._objectToString.call( current ).slice( 8, -1 );
+						let result: boolean;
+						[ result, current ] = Myopie._navigators[ tag ] ? Myopie._navigators[ tag ]( current, component, true ) : [ false, undefined ];
+						changed ||= result;
+					}
+				}
+				return current;
+			},
+			this._dataCurrent
+		);
+		if( undefined !== target ) {
+			let lastComponent: string = components[ lastComponentIndex ];
+			lastComponent = lastComponent.replace( Myopie._regexpPathUnescapeSlash, '/' );
+			if( '__proto__' !== lastComponent ) {
+				const tag: string = Myopie._objectToString.call( target ).slice( 8, -1 );
+				switch( tag ) {
+					case 'Map': {
+						const targetMap: Map<string, any> = target as Map<string, any>;
+						const currentValueExists: boolean = targetMap.has( lastComponent );
+						const currentValue: any = targetMap.get( lastComponent );
+						if( !currentValueExists || ( currentValue !== value ) ) {
+							changed = true;
+							targetMap.set( lastComponent, value );
+						}
+						returnValue = true;
+						break;
+					}
+					case 'Object':
+					case 'Array': {
+						const currentValueExists: boolean = Object.hasOwn( target, lastComponent );
+						const currentValue: any = target[ lastComponent ];
+						if( !currentValueExists || ( currentValue !== value ) ) {
+							changed = true;
+							target[ lastComponent ] = value;
+						}
+						returnValue = true;
+						break;
+					}
+				}
+			}
+		}
+		if( changed ) {
+			if( render ) {
+				this.renderDebounce();
+			}
+		} else if( resetPrevious ) {
+			this._dataPrevious = undefined;
 		}
 		return returnValue;
 	}
