@@ -45,6 +45,6 @@
     "c8": "~12",
     "jsdom": "~26",
     "terser": "~5",
-    "typescript": "~5"
+    "typescript": "~6"
   }
 }
