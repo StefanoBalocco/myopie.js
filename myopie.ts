@@ -138,7 +138,7 @@ export default class Myopie {
 	private _dataPrevious: any;
 	private _inited: boolean = false;
 	private _lastRendering: Undefinedable<string>;
-	private _timer: Undefinedable<number>;
+	private _timer: Undefinedable<ReturnType<typeof setTimeout>>;
 	private _hooks: Hooks = { init: { pre: [], post: [] }, render: { pre: [], post: [] } };
 
 	public constructor( selector: string, template: TemplateEngine, initialData: any = {}, inputToPath: string[][] = [], timeout: number = 100, renderOnInput: boolean = true ) {

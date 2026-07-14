@@ -74,10 +74,11 @@ let prefix: string;
 	} );
 
 	test( prefix + ': should create instance with custom timeout', ( t ) => {
-		const template = ( data: any ): string => `<div>${data.content}</div>`;
+		const template = ( _data: any ): string => `<div>${_data.content}</div>`;
 		const myopie = new Myopie( '#test', template, {}, [], 200 );
 		t.truthy( myopie );
 	} );
+
 }
 
 // ─── API: get ────────────────────────────────────────────────────────────────

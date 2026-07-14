@@ -60,7 +60,7 @@ let prefix;
         t.truthy(myopie);
     });
     test(prefix + ': should create instance with custom timeout', (t) => {
-        const template = (data) => `<div>${data.content}</div>`;
+        const template = (_data) => `<div>${_data.content}</div>`;
         const myopie = new Myopie('#test', template, {}, [], 200);
         t.truthy(myopie);
     });
