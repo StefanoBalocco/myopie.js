@@ -20,7 +20,6 @@
 	"files":
 	[
 		"jsdom.d.ts",
-		"myopie.test.ts",
-		"build.test.ts"
+		"myopie.test.ts"
 	]
 }

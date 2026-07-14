@@ -10,8 +10,6 @@
     "myopie.ts",
     "myopie.test.js",
     "myopie.test.ts",
-    "build.test.js",
-    "build.test.ts",
     "build.mjs",
     "tsconfig.json",
     "tsconfig.tests.json",
@@ -44,7 +42,7 @@
   "devDependencies": {
     "@types/node": "^26.1.1",
     "ava": "~6",
-    "c8": "~10",
+    "c8": "~12",
     "jsdom": "~26",
     "terser": "~5",
     "typescript": "~5"

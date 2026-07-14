@@ -178,16 +178,23 @@ async function minifyFile( absPath ) {
 			compress: { defaults: true, reduce_vars: false },
 			mangle: { properties: { regex: /^_/ } }
 		} );
-		const transformedCode = transformedResult.code;
-		if( Buffer.byteLength( transformedCode, 'utf8' ) < Buffer.byteLength( baselineCode, 'utf8' ) ) {
-			outputCode = transformedCode;
-			log( 'MINIFY', `Transformed aliased output is smaller — wrote ${ outPath }` );
+		const size = [
+			Buffer.byteLength( baselineCode, 'utf8' ),
+			Buffer.byteLength( transformedResult.code, 'utf8' )
+		];
+		log( 'MINIFY', `Baseline    output size: ${size[0]}` );
+		log( 'MINIFY', `Transformed output size: ${size[1]}` );
+		if( size[ 1 ] < size[ 0 ] ) {
+			outputCode = transformedResult.code;
+			log( 'MINIFY', `Transformed output written — ${ outPath }` );
 		} else {
 			outputCode = baselineCode;
 			log( 'MINIFY', `Baseline output written — ${ outPath }` );
 		}
 	} else {
+		log( 'MINIFY', 'Code not transformed' );
 		outputCode = baselineCode;
+		log( 'MINIFY', `Baseline output written — ${ outPath }` );
 	}
 
 	await fs.writeFile( outPath, outputCode );
