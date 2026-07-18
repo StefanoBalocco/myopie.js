@@ -20,9 +20,20 @@ const window = dom.window;
 ( globalThis as any ).HTMLTemplateElement = window.HTMLTemplateElement;
 
 // Dynamic import Myopie after globals are set
-const { default: Myopie } = await import( './myopie.js' );
+const { default: MyopieOriginal } = await import( './myopie.js' );
+// @ts-expect-error myopie.min.js intentionally shares the original public API.
+const { default: MyopieMinified } = await import( './myopie.min.js' );
 
-// Test data shared across tests
+const targets: readonly { tag: string; Myopie: typeof MyopieOriginal; }[] = [
+	{ tag: '[myopie-original]', Myopie: MyopieOriginal },
+	{ tag: '[myopie-minified]', Myopie: MyopieMinified as typeof MyopieOriginal }
+];
+
+for( const target of targets ) {
+	const tag: string = target.tag;
+	const Myopie: typeof MyopieOriginal = target.Myopie;
+
+	// Test data shared across tests
 const testData: any = {
 	booleanTrue: true,
 	booleanFalse: false,
@@ -53,7 +64,7 @@ let prefix: string;
 // ─── API: constructor ────────────────────────────────────────────────────────
 
 {
-	prefix = 'constructor';
+	prefix = tag + 'constructor';
 
 	test( prefix + ': should create instance with minimal parameters', ( t ) => {
 		const template = ( _data: any ): string => `<div>${_data.content}</div>`;
@@ -84,7 +95,7 @@ let prefix: string;
 // ─── API: get ────────────────────────────────────────────────────────────────
 
 {
-	prefix = 'get';
+	prefix = tag + 'get';
 
 	test( prefix + ': should return undefined for null path', ( t ) => {
 		const template = ( _data: any ): string => '';
@@ -221,7 +232,7 @@ let prefix: string;
 // ─── API: set ────────────────────────────────────────────────────────────────
 
 {
-	prefix = 'set';
+	prefix = tag + 'set';
 
 	test( prefix + ': should set simple value and return true', ( t ) => {
 		const template = ( _data: any ): string => '';
@@ -463,7 +474,7 @@ let prefix: string;
 // ─── API: del ─────────────────────────────────────────────────────────────────
 
 {
-	prefix = 'del';
+	prefix = tag + 'del';
 
 	test( prefix + ': should expose del as a function', ( t ) => {
 		const template: ( _data: any ) => string = ( _data: any ): string => '';
@@ -615,7 +626,7 @@ let prefix: string;
 // ─── API: deep clone ─────────────────────────────────────────────────────────
 
 {
-	prefix = 'deep clone';
+	prefix = tag + 'deep clone';
 
 	test( prefix + ': should clone initial data to prevent external mutations', ( t ) => {
 		const template = ( _data: any ): string => '';
@@ -694,7 +705,7 @@ let prefix: string;
 // ─── Rendering: render ───────────────────────────────────────────────────────
 
 {
-	prefix = 'render';
+	prefix = tag + 'render';
 
 	test( prefix + ': should return false when selector does not exist', ( t ) => {
 		const template = ( _data: any ): string => '<div>content</div>';
@@ -790,7 +801,7 @@ let prefix: string;
 // ─── Rendering: renderDebounce ───────────────────────────────────────────────
 
 {
-	prefix = 'renderDebounce';
+	prefix = tag + 'renderDebounce';
 
 	test.serial( prefix + ': should defer rendering with timeout', async ( t ) => {
 		document.body.innerHTML = '<div id="container"></div>';
@@ -838,7 +849,7 @@ let prefix: string;
 // ─── Hooks ───────────────────────────────────────────────────────────────────
 
 {
-	prefix = 'hooks: init pre';
+	prefix = tag + 'hooks: init pre';
 
 	test( prefix + ': should call init pre hook before first render', ( t ) => {
 		document.body.innerHTML = '<div id="container"></div>';
@@ -870,7 +881,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'hooks: init post';
+	prefix = tag + 'hooks: init post';
 
 	test( prefix + ': should call init post hook after first render', ( t ) => {
 		document.body.innerHTML = '<div id="container"></div>';
@@ -902,7 +913,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'hooks: render pre';
+	prefix = tag + 'hooks: render pre';
 
 	test( prefix + ': should not call render pre hook on first render', ( t ) => {
 		document.body.innerHTML = '<div id="container"></div>';
@@ -938,7 +949,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'hooks: render post';
+	prefix = tag + 'hooks: render post';
 
 	test( prefix + ': should not call render post hook on first render', ( t ) => {
 		document.body.innerHTML = '<div id="container"></div>';
@@ -976,7 +987,7 @@ let prefix: string;
 // ─── Event handlers ──────────────────────────────────────────────────────────
 
 {
-	prefix = 'handlersPermanentAdd';
+	prefix = tag + 'handlersPermanentAdd';
 
 	test( prefix + ': should add handler and return true', ( t ) => {
 		const template = ( _data: any ): string => '';
@@ -1043,7 +1054,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'handlersPermanentDel';
+	prefix = tag + 'handlersPermanentDel';
 
 	test( prefix + ': should remove specific handler and return true', ( t ) => {
 		const template = ( _data: any ): string => '';
@@ -1115,7 +1126,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'input handling';
+	prefix = tag + 'input handling';
 
 	test( prefix + ': should update data on input event for text input', ( t ) => {
 		document.body.innerHTML = '<div id="container"></div>';
@@ -1191,7 +1202,7 @@ let prefix: string;
 // ─── Lifecycle: destroy ──────────────────────────────────────────────────────
 
 {
-	prefix = 'destroy';
+	prefix = tag + 'destroy';
 
 	test.serial( prefix + ': should clear pending render timeout', async ( t ) => {
 		document.body.innerHTML = '<div id="container"></div>';
@@ -1251,7 +1262,7 @@ let prefix: string;
 // ─── data-myopie-* attributes ────────────────────────────────────────────────
 
 {
-	prefix = 'data-myopie-ignore-content';
+	prefix = tag + 'data-myopie-ignore-content';
 
 	test( prefix + ': should preserve element content when attribute is true', ( t ) => {
 		document.body.innerHTML = '<div id="container"><div data-myopie-ignore-content="true">preserved</div></div>';
@@ -1286,7 +1297,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'data-myopie-ignore-style';
+	prefix = tag + 'data-myopie-ignore-style';
 
 	test( prefix + ': should preserve element style when attribute is true', ( t ) => {
 		document.body.innerHTML = '<div id="container"><div data-myopie-ignore-style="true" style="color: red;">content</div></div>';
@@ -1319,7 +1330,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'data-myopie-default-*';
+	prefix = tag + 'data-myopie-default-*';
 
 	test( prefix + ': should set default attribute when not present', ( t ) => {
 		document.body.innerHTML = '<div id="container"><div>content</div></div>';
@@ -1381,7 +1392,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'data-myopie-id';
+	prefix = tag + 'data-myopie-id';
 
 	test( prefix + ': should be preserved in DOM after render', ( t ) => {
 		document.body.innerHTML = '<div id="container"></div>';
@@ -1405,7 +1416,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'data-myopie-ignore-* stripping';
+	prefix = tag + 'data-myopie-ignore-* stripping';
 
 	test( prefix + ': attribute itself should be stripped from DOM after render', ( t ) => {
 		document.body.innerHTML = '<div id="container"></div>';
@@ -1420,7 +1431,7 @@ let prefix: string;
 // ─── DOM diffing ─────────────────────────────────────────────────────────────
 
 {
-	prefix = 'node scoring';
+	prefix = tag + 'node scoring';
 
 	test( prefix + ': should select best matching node by element id over first candidate', ( t ) => {
 		document.body.innerHTML = '<div id="container"><div>generic</div><div id="target">correct</div></div>';
@@ -1454,7 +1465,7 @@ let prefix: string;
 }
 
 {
-	prefix = '_nodeDiff';
+	prefix = tag + '_nodeDiff';
 
 	test( prefix + ': should append text node when existing has fewer nodes than template', ( t ) => {
 		document.body.innerHTML = '<div id="container"></div>';
@@ -1505,7 +1516,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'html comments';
+	prefix = tag + 'html comments';
 
 	test( prefix + ': comment in existing DOM should be removed after render', ( t ) => {
 		document.body.innerHTML = '<div id="container"><!-- existing comment --><p>content</p></div>';
@@ -1533,7 +1544,7 @@ let prefix: string;
 // ─── Comparators ─────────────────────────────────────────────────────────────
 
 {
-	prefix = 'comparators: input';
+	prefix = tag + 'comparators: input';
 
 	test( prefix + ': should call input comparator to match elements by type and name', ( t ) => {
 		document.body.innerHTML = '<div id="container"><input type="text" name="username"></div>';
@@ -1547,7 +1558,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'comparators: link';
+	prefix = tag + 'comparators: link';
 
 	test( prefix + ': should call link comparator to match elements by href', ( t ) => {
 		document.body.innerHTML = '<div id="container"><link rel="stylesheet" href="http://localhost/style.css"></div>';
@@ -1561,7 +1572,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'comparators: a';
+	prefix = tag + 'comparators: a';
 
 	test( prefix + ': should call anchor comparator to match elements by href', ( t ) => {
 		document.body.innerHTML = '<div id="container"><a href="http://localhost/other">Other</a><a href="http://localhost/target">Target</a></div>';
@@ -1576,7 +1587,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'comparators: img';
+	prefix = tag + 'comparators: img';
 
 	test( prefix + ': should call img comparator to match elements by src', ( t ) => {
 		document.body.innerHTML = '<div id="container"><img src="http://localhost/image.png"></div>';
@@ -1590,7 +1601,7 @@ let prefix: string;
 }
 
 {
-	prefix = 'comparators: script';
+	prefix = tag + 'comparators: script';
 
 	test( prefix + ': should call script comparator to match elements by src', ( t ) => {
 		document.body.innerHTML = '<div id="container"><script src="http://localhost/app.js"></script></div>';
@@ -1606,7 +1617,7 @@ let prefix: string;
 // ─── Integration: mixed template ─────────────────────────────────────────────
 
 {
-	prefix = 'mixed template';
+	prefix = tag + 'mixed template';
 
 	test( prefix + ': should correctly render and update a template mixing divs, spans, a, img, script, text and comments', ( t ) => {
 		document.body.innerHTML = '<div id="container"></div>';
@@ -1635,4 +1646,5 @@ let prefix: string;
 		t.is( ( wrapper?.querySelector( 'img' ) as HTMLImageElement )?.alt, 'new photo' );
 		t.is( wrapper?.querySelector( '.footer' )?.textContent, 'Updated' );
 	} );
+}
 }

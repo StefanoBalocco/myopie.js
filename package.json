@@ -20,7 +20,7 @@
     "type": "git",
     "url": "https://github.com/StefanoBalocco/myopie.js.git"
   },
-  "version": "1.2.0",
+  "version": "1.2.1",
   "keywords": [
     "MVC"
   ],
@@ -40,7 +40,8 @@
     "tests": "c8 --reporter=text --reporter=lcov ava '*.test.js' --verbose --serial"
   },
   "devDependencies": {
-    "@types/node": "^26.1.1",
+    "@types/node": "~24",
+    "@stefanobalocco/tersercompanion": "~1",
     "ava": "~6",
     "c8": "~12",
     "jsdom": "~26",
